@@ -1,45 +1,43 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 interface BlogPost {
-  image: string;
-  date: string;
-  author: string;
-  comments: number;
+  blog_id: number;
   title: string;
   description: string;
+  image_url: string;
+  post_date: string;
+  comments_count?: number;
+  created_at: string;
+  update_at: string;
 }
 
-const blogs: BlogPost[] = [
-  {
-    image: "/images/image_1.jpg",
-    date: "Sept 10, 2018",
-    author: "Admin",
-    comments: 3,
-    title: "The Delicious Pizza",
-    description:
-      "A small river named Duden flows by their place and supplies it with the necessary regelialia.",
-  },
-  {
-    image: "/images/image_2.jpg",
-    date: "Sept 10, 2018",
-    author: "Admin",
-    comments: 3,
-    title: "The Delicious Pizza",
-    description:
-      "A small river named Duden flows by their place and supplies it with the necessary regelialia.",
-  },
-  {
-    image: "/images/image_3.jpg",
-    date: "Sept 10, 2018",
-    author: "Admin",
-    comments: 3,
-    title: "The Delicious Pizza",
-    description:
-      "A small river named Duden flows by their place and supplies it with the necessary regelialia.",
-  },
-];
-
 const Blog: React.FC = () => {
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
+
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      try {
+        const response = await fetch("http://localhost:5173/api/blog");
+        if (!response.ok) {
+          throw new Error("Lỗi khi tải dữ liệu blog");
+        }
+        const data: BlogPost[] = await response.json();
+        const sortedBlogs = data
+          .sort(
+            (a, b) =>
+              new Date(b.post_date).getTime() - new Date(a.post_date).getTime()
+          )
+          .slice(0, 3);
+
+        setBlogs(sortedBlogs);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu blog:", error);
+      }
+    };
+
+    fetchBlogs();
+  }, []);
+
   return (
     <section className="w-full bg-[#111] text-white py-20">
       <div className="max-w-7xl mx-auto px-6">
@@ -53,7 +51,6 @@ const Blog: React.FC = () => {
           </p>
         </div>
 
-        {/* Danh sách bài viết */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           {blogs.map((blog, index) => (
             <div
@@ -63,16 +60,15 @@ const Blog: React.FC = () => {
               <a
                 href="#"
                 className="block h-64 bg-cover bg-center"
-                style={{ backgroundImage: `url(${blog.image})` }}
+                style={{ backgroundImage: `url(${blog.image_url})` }}
               ></a>
 
               <div className="p-6">
                 <div className="flex items-center gap-3 text-gray-400 text-sm mb-3">
-                  <span>{blog.date}</span>
-                  <span>{blog.author}</span>
+                  <span>{new Date(blog.post_date).toLocaleDateString()}</span>
                   <span className="flex items-center gap-1">
                     <i className="fa-solid fa-comment text-gray-300"></i>
-                    {blog.comments}
+                    {blog.comments_count}
                   </span>
                 </div>
 

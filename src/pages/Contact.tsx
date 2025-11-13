@@ -1,6 +1,6 @@
 import React from "react";
 
-const Contact = () => {
+const Contact: React.FC = () => {
   return (
     <>
       <section
@@ -10,7 +10,7 @@ const Contact = () => {
         }}
       >
         <div className="relative z-10 text-center text-white px-6">
-          <h1 className="text-5xl font-bold mb-4 mt-10">Our Menu</h1>
+          <h1 className="text-5xl font-bold mb-4 mt-10">CONTACT</h1>
           <p className="text-lg">
             <span className="mr-2 text-gray-300">
               <a href="/" className="hover:text-white transition">
@@ -94,8 +94,6 @@ const Contact = () => {
                     />
                   </div>
                 </div>
-
-                {/* Subject */}
                 <div>
                   <label
                     htmlFor="subject"
@@ -110,8 +108,6 @@ const Contact = () => {
                     placeholder=""
                   />
                 </div>
-
-                {/* Message */}
                 <div>
                   <label
                     htmlFor="message"
@@ -127,7 +123,6 @@ const Contact = () => {
                   ></textarea>
                 </div>
 
-                {/* Submit Button */}
                 <div className="flex justify-start">
                   <button
                     type="submit"

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { ShoppingCart, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -18,15 +17,25 @@ const Navbar: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    axios
-      .get<NavItem[]>("http://localhost:5000/api/navbar")
-      .then((res) => setMenuItems(res.data))
-      .catch((err) => console.error("Lỗi khi tải navbar:", err));
+    const fetchNavbar = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/navbar");
+        if (!response.ok) {
+          throw new Error("Lỗi khi tải navbar");
+        }
+        const data: NavItem[] = await response.json();
+        setMenuItems(data);
+      } catch (error) {
+        console.error("Lỗi khi tải navbar:", error);
+      }
+    };
+    fetchNavbar();
   }, []);
 
   const mainMenu = menuItems.filter(
     (item) => !item.parent_id && item.is_active === 1
   );
+
   const getSubMenu = (id: number) =>
     menuItems.filter((i) => i.parent_id === id && i.is_active === 1);
 
@@ -91,6 +100,7 @@ const Navbar: React.FC = () => {
               </li>
             );
           })}
+
           <li>
             <Link
               to="/cart"

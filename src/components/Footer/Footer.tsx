@@ -66,7 +66,6 @@ const Footer: React.FC = () => {
             ))}
           </div>
 
-          {/* SERVICES */}
           <div>
             <h2 className="text-white text-xl font-semibold mb-4">SERVICES</h2>
             <ul className="space-y-2">
@@ -80,7 +79,6 @@ const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* HAVE A QUESTIONS */}
           <div>
             <h2 className="text-white text-xl font-semibold mb-4">
               HAVE A QUESTIONS?
@@ -108,7 +106,6 @@ const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* COPYRIGHT */}
         <div className="border-t border-gray-800 pt-6 text-center text-sm text-gray-500">
           Copyright ©{new Date().getFullYear()} All rights reserved | This
           template is made with{" "}

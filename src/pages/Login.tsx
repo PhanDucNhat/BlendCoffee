@@ -1,10 +1,56 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { ArrowLeft } from "lucide-react";
 
+interface FormValues {
+  username: string;
+  email: string;
+  password: string;
+}
+
 const LoginForm: React.FC = () => {
-  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
   const navigate = useNavigate();
+  const [values, setValues] = useState<FormValues>({
+    username: "",
+    email: "",
+    password: "",
+  });
+
+  const handleChanges = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValues({ ...values, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    try {
+      if (isLoginMode) {
+        await axios.post("http://localhost:5000/api/login", {
+          email: values.email,
+          password: values.password,
+        });
+
+        alert("Đăng nhập thành công!");
+        navigate("/");
+      } else {
+        await axios.post("http://localhost:5000/api/signup", {
+          username: values.username,
+          email: values.email,
+          password: values.password,
+        });
+
+        alert("Đăng ký thành công!");
+        setIsLoginMode(true);
+        setValues({ username: "", email: "", password: "" });
+        window.scrollTo(0, 0);
+      }
+    } catch (error: unknown) {
+      alert("Sai tên đăng nhập hoặc mật khẩu!");
+      console.log(error);
+    }
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen">
@@ -17,6 +63,7 @@ const LoginForm: React.FC = () => {
             <ArrowLeft className="w-5 h-5 mr-1" />
             <span className="text-sm font-medium">Quay lại</span>
           </button>
+
           <h2 className="text-3xl font-semibold text-center flex-1 text-gray-900">
             {isLoginMode ? "Login" : "Sign Up"}
           </h2>
@@ -47,13 +94,16 @@ const LoginForm: React.FC = () => {
           ></div>
         </div>
 
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           {!isLoginMode && (
             <input
               type="text"
               placeholder="Name"
               required
               className="w-full p-3 border-b-2 border-gray-300 outline-none focus:border-cyan-500 placeholder-gray-400"
+              name="username"
+              value={values.username}
+              onChange={handleChanges}
             />
           )}
 
@@ -62,22 +112,20 @@ const LoginForm: React.FC = () => {
             placeholder="Email Address"
             required
             className="w-full p-3 border-b-2 border-gray-300 outline-none focus:border-cyan-500 placeholder-gray-400"
+            name="email"
+            value={values.email}
+            onChange={handleChanges}
           />
+
           <input
             type="password"
             placeholder="Password"
             required
             className="w-full p-3 border-b-2 border-gray-300 outline-none focus:border-cyan-500 placeholder-gray-400"
+            name="password"
+            value={values.password}
+            onChange={handleChanges}
           />
-
-          {!isLoginMode && (
-            <input
-              type="password"
-              placeholder="Confirm Password"
-              required
-              className="w-full p-3 border-b-2 border-gray-300 outline-none focus:border-cyan-500 placeholder-gray-400"
-            />
-          )}
 
           {isLoginMode && (
             <div className="text-right">

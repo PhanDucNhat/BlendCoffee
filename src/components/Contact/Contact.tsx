@@ -5,7 +5,6 @@ const Contact: React.FC = () => {
     <div className="relative w-full bg-[#1a1a1a] text-white pb-8">
       <div className="max-w-full mx-auto px-6 relative z-10">
         <div className="flex flex-col md:flex-row md:items-end gap-10">
-          {/* --- Contact Info --- */}
           <div className="flex-1 text-left ml-20 pt-8">
             <div className="grid md:grid-cols-3 gap-8">
               <div className="flex items-start space-x-4">

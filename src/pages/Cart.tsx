@@ -5,6 +5,7 @@ interface CartItem {
   id: number;
   name: string;
   description: string;
+  size: string;
   price: number;
   quantity: number;
   image: string;
@@ -16,6 +17,7 @@ const cartItems: CartItem[] = [
     name: "CREAMY LATTE COFFEE",
     description:
       "Far far away, behind the word mountains, far from the countries",
+    size: "M",
     price: 4.9,
     quantity: 1,
     image: "/images/menu-2.jpg",
@@ -25,6 +27,7 @@ const cartItems: CartItem[] = [
     name: "GRILLED RIBS BEEF",
     description:
       "Far far away, behind the word mountains, far from the countries",
+    size: "L",
     price: 16.7,
     quantity: 1,
     image: "/images/dish-2.jpg",
@@ -59,6 +62,7 @@ const Cart: React.FC = () => {
           <div className="w-12"></div>
           <div className="w-20"></div>
           <div className="flex-1 pr-10">Product</div>
+          <div className="pr-[72px]">Size</div>
           <div className="w-20 text-center pr-[105px]">Price</div>
           <div className="w-24 text-center pr-24">Quantity</div>
           <div className="w-20 text-center">Total</div>
@@ -81,6 +85,7 @@ const Cart: React.FC = () => {
               <h3 className="font-bold uppercase text-sm">{item.name}</h3>
               <p className="text-xs text-gray-400">{item.description}</p>
             </div>
+            <div className="w-20 text-center">{item.size}</div>
             <div className="w-20 text-center">${item.price.toFixed(2)}</div>
             <div className="w-24">
               <input

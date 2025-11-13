@@ -1,88 +1,57 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 interface Product {
-  image: string;
-  title: string;
+  menu_id: number;
+  name: string;
   description: string;
-  price: string;
+  image_url: string;
+  category_id: number;
+  category_name?: string;
+  price?: number;
 }
 
-const tabs = ["Main Dish", "Drinks", "Desserts"];
-
-const data: Record<string, Product[]> = {
-  "Main Dish": [
-    {
-      image: "/images/dish-1.jpg",
-      title: "Grilled Beef",
-      description:
-        "Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.",
-      price: "$2.90",
-    },
-    {
-      image: "/images/dish-2.jpg",
-      title: "Grilled Beef",
-      description:
-        "Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.",
-      price: "$2.90",
-    },
-    {
-      image: "/images/dish-3.jpg",
-      title: "Grilled Beef",
-      description:
-        "Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.",
-      price: "$2.90",
-    },
-  ],
-  Drinks: [
-    {
-      image: "/images/drink-1.jpg",
-      title: "Lemonade Juice",
-      description:
-        "Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.",
-      price: "$2.90",
-    },
-    {
-      image: "/images/drink-2.jpg",
-      title: "Pineapple Juice",
-      description:
-        "Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.",
-      price: "$2.90",
-    },
-    {
-      image: "/images/drink-3.jpg",
-      title: "Soda Drinks",
-      description:
-        "Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.",
-      price: "$2.90",
-    },
-  ],
-  Desserts: [
-    {
-      image: "/images/dessert-1.jpg",
-      title: "Hot Cake Honey",
-      description:
-        "Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.",
-      price: "$2.90",
-    },
-    {
-      image: "/images/dessert-2.jpg",
-      title: "Hot Cake Honey",
-      description:
-        "Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.",
-      price: "$2.90",
-    },
-    {
-      image: "/images/dessert-3.jpg",
-      title: "Hot Cake Honey",
-      description:
-        "Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.",
-      price: "$2.90",
-    },
-  ],
-};
-
 const Product: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>("Main Dish");
+  const [shopData, setShopData] = useState<Record<string, Product[]>>({});
+  const [, setError] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>("");
+  // const [activeTab, setActiveTab] = useState<string>("Main Dish");
+
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/menu");
+        if (!response.ok) throw new Error("Lỗi khi lấy dữ liệu menu");
+
+        const data: Product[] = await response.json();
+
+        const allowedCategories = ["Desserts", "Drinks", "Main Dish"];
+
+        const grouped: Record<string, Product[]> = {};
+
+        allowedCategories.forEach((cat) => {
+          const items = data
+            .filter((item) => item.category_name === cat)
+            .sort((a, b) => b.menu_id - a.menu_id)
+            .slice(0, 3);
+
+          if (items.length > 0) {
+            grouped[cat] = items;
+          }
+        });
+
+        setShopData(grouped);
+
+        const firstCategory = Object.keys(grouped)[0];
+        if (firstCategory) setActiveCategory(firstCategory);
+      } catch (err: unknown) {
+        console.error("Lỗi khi tải menu:", err);
+        if (err instanceof Error) setError(err.message);
+        else setError("Đã xảy ra lỗi không xác định");
+      }
+    };
+
+    fetchMenu();
+  }, []);
 
   return (
     <div className="w-full bg-[#0d0d0d] text-white pb-20">
@@ -99,36 +68,41 @@ const Product: React.FC = () => {
         </div>
 
         <div className="flex justify-center space-x-6 mb-12 border-b border-[#b6894b]/30 pb-3">
-          {tabs.map((tab) => (
+          {Object.keys(shopData).map((category) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={category}
+              onClick={() => setActiveCategory(category)}
               className={`px-4 pb-2 text-lg font-medium transition-colors ${
-                activeTab === tab
+                activeCategory === category
                   ? "text-white border-b-2 border-[#b6894b]"
                   : "text-gray-400 hover:text-[#b6894b]"
               }`}
             >
-              {tab}
+              {category}
             </button>
           ))}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-10">
-          {data[activeTab].map((item, index) => (
+          {shopData[activeCategory]?.map((item) => (
             <div
-              key={index}
+              key={item.menu_id}
               className="text-center bg-[#141414] hover:scale-105 transition-transform duration-300 pb-4"
             >
               <div
                 className="h-64 bg-cover bg-center mb-6"
-                style={{ backgroundImage: `url(${item.image})` }}
+                style={{ backgroundImage: `url(${item.image_url})` }}
               ></div>
               <h3 className="uppercase font-semibold text-lg mb-2">
-                {item.title}
+                {item.name}
               </h3>
               <p className="text-gray-400 text-sm mb-3">{item.description}</p>
-              <p className="text-white font-semibold mb-3">{item.price}</p>
+              <p className="text-white font-semibold mb-3">
+                $
+                {item.price
+                  ? parseFloat(String(item.price)).toFixed(2)
+                  : "0.00"}
+              </p>
               <button className="border border-[#b6894b] text-[#b6894b] px-5 py-2 text-sm hover:bg-[#b6894b] hover:text-white transition">
                 Add to cart
               </button>

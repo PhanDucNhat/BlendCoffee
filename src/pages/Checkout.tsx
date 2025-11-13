@@ -41,8 +41,6 @@ const Checkout = () => {
                     />
                   </div>
                 </div>
-
-                {/* Country */}
                 <div>
                   <label className="block text-sm mb-1">State / Country</label>
                   <select className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white appearance-none">
@@ -51,8 +49,6 @@ const Checkout = () => {
                     <option>Vietnam</option>
                   </select>
                 </div>
-
-                {/* Street Address */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm mb-1">Street Address</label>
@@ -71,8 +67,6 @@ const Checkout = () => {
                     />
                   </div>
                 </div>
-
-                {/* Town / City & Postcode */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm mb-1">Town / City</label>
@@ -93,8 +87,6 @@ const Checkout = () => {
                     />
                   </div>
                 </div>
-
-                {/* Phone & Email */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm mb-1">Phone</label>
@@ -113,8 +105,6 @@ const Checkout = () => {
                     />
                   </div>
                 </div>
-
-                {/* Checkbox Options */}
                 <div className="flex flex-wrap items-center gap-20 pt-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input

@@ -1,71 +1,35 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 interface BlogPost {
-  image: string;
-  date: string;
-  author: string;
-  comments: number;
+  blog_id: number;
   title: string;
   description: string;
+  image_url: string;
+  post_date: string;
+  comments_count?: number;
+  created_at: string;
+  update_at: string;
 }
 
-const blogs: BlogPost[] = [
-  {
-    image: "/images/image_1.jpg",
-    date: "Sept 10, 2018",
-    author: "Admin",
-    comments: 3,
-    title: "The Delicious Pizza",
-    description:
-      "A small river named Duden flows by their place and supplies it with the necessary regelialia.",
-  },
-  {
-    image: "/images/image_2.jpg",
-    date: "Sept 10, 2018",
-    author: "Admin",
-    comments: 3,
-    title: "The Delicious Pizza",
-    description:
-      "A small river named Duden flows by their place and supplies it with the necessary regelialia.",
-  },
-  {
-    image: "/images/image_3.jpg",
-    date: "Sept 10, 2018",
-    author: "Admin",
-    comments: 3,
-    title: "The Delicious Pizza",
-    description:
-      "A small river named Duden flows by their place and supplies it with the necessary regelialia.",
-  },
-  {
-    image: "/images/image_4.jpg",
-    date: "Sept 10, 2018",
-    author: "Admin",
-    comments: 3,
-    title: "The Delicious Pizza",
-    description:
-      "A small river named Duden flows by their place and supplies it with the necessary regelialia.",
-  },
-  {
-    image: "/images/image_5.jpg",
-    date: "Sept 10, 2018",
-    author: "Admin",
-    comments: 3,
-    title: "The Delicious Pizza",
-    description:
-      "A small river named Duden flows by their place and supplies it with the necessary regelialia.",
-  },
-  {
-    image: "/images/image_6.jpg",
-    date: "Sept 10, 2018",
-    author: "Admin",
-    comments: 3,
-    title: "The Delicious Pizza",
-    description:
-      "A small river named Duden flows by their place and supplies it with the necessary regelialia.",
-  },
-];
-
 const Blog = () => {
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
+
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      try {
+        const response = await fetch("http://localhost:5173/api/blog");
+        if (!response.ok) {
+          throw new Error("Lỗi khi tải dữ liệu blog");
+        }
+        const data: BlogPost[] = await response.json();
+        setBlogs(data);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu blog:", error);
+      }
+    };
+
+    fetchBlogs();
+  }, []);
+
   return (
     <>
       <section
@@ -75,7 +39,7 @@ const Blog = () => {
         }}
       >
         <div className="relative z-10 text-center text-white px-6">
-          <h1 className="text-5xl font-bold mb-4 mt-10">Our Menu</h1>
+          <h1 className="text-5xl font-bold mb-4 mt-10">BLOG</h1>
           <p className="text-lg">
             <span className="mr-2 text-gray-300">
               <a href="/" className="hover:text-white transition">
@@ -97,16 +61,15 @@ const Blog = () => {
                 <a
                   href="#"
                   className="block h-64 bg-cover bg-center"
-                  style={{ backgroundImage: `url(${blog.image})` }}
+                  style={{ backgroundImage: `url(${blog.image_url})` }}
                 ></a>
 
                 <div className="p-6 text-left">
                   <div className="flex items-center gap-3 text-gray-400 text-sm mb-3">
-                    <span>{blog.date}</span>
-                    <span>{blog.author}</span>
+                    <span>{new Date(blog.post_date).toLocaleDateString()}</span>
                     <span className="flex items-center gap-1">
                       <i className="fa-solid fa-comment text-gray-300"></i>
-                      {blog.comments}
+                      {blog.comments_count}
                     </span>
                   </div>
 

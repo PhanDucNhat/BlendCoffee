@@ -65,7 +65,7 @@ const AboutPage: React.FC = () => {
         }}
       >
         <div className="relative z-10 text-center text-white px-6">
-          <h1 className="text-5xl font-bold mb-4 mt-10">Our Menu</h1>
+          <h1 className="text-5xl font-bold mb-4 mt-10">OBOUT US</h1>
           <p className="text-lg">
             <span className="mr-2 text-gray-300">
               <a href="/" className="hover:text-white transition">
