@@ -182,7 +182,6 @@ export default function AdminMenu() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    // Kiểm tra ít nhất 1 giá
     const hasPrice =
       formData.get("price_small") ||
       formData.get("price_medium") ||
@@ -196,7 +195,7 @@ export default function AdminMenu() {
     try {
       const res = await fetch("http://localhost:5000/api/admin/menu/add", {
         method: "POST",
-        body: formData, // Gửi FormData (có file + text)
+        body: formData,
       });
 
       const data = await res.json();
@@ -204,7 +203,7 @@ export default function AdminMenu() {
 
       alert("Thêm món thành công!");
       closeModals();
-      await fetchData(); // Refresh danh sách
+      await fetchData();
     } catch (err: unknown) {
       if (err instanceof Error) {
         alert(err.message);
@@ -229,28 +228,34 @@ export default function AdminMenu() {
     if (!editingItem) return;
 
     const formData = new FormData(e.currentTarget);
-    const payload = {
-      name: formData.get("name") as string,
-      description: (formData.get("description") as string) || null,
-      category_id: Number(formData.get("category_id")),
-      status: Number(formData.get("status")),
-    };
+
+    const hasPrice =
+      formData.get("price_small") ||
+      formData.get("price_medium") ||
+      formData.get("price_large");
+
+    if (!hasPrice) {
+      alert("Vui lòng nhập ít nhất 1 giá (Small, Medium hoặc Large)");
+      return;
+    }
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/menu/${editingItem.menu_id}`,
+        `http://localhost:5000/api/admin/menu/${editingItem.menu_id}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: formData,
         }
       );
 
-      if (!res.ok) throw new Error("Sửa thất bại");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Cập nhật thất bại");
+
+      alert("Cập nhật món thành công!");
       closeModals();
       await fetchData();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Lỗi khi sửa món");
+      alert(err instanceof Error ? err.message : "Lỗi khi cập nhật món");
     }
   };
 
@@ -259,16 +264,80 @@ export default function AdminMenu() {
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/menu/${deletingItem.menu_id}`,
+        `http://localhost:5000/api/admin/menu/${deletingItem.menu_id}`,
         { method: "DELETE" }
       );
 
       if (!res.ok) throw new Error("Xóa thất bại");
+      alert("Xóa món thành công!");
       closeModals();
       await fetchData();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Lỗi khi xóa món");
     }
+  };
+
+  const handleBulkStatus = async (newStatus: 0 | 1) => {
+    if (selectedItems.length === 0) return;
+
+    const action = newStatus === 1 ? "kích hoạt" : "hủy kích hoạt";
+    if (
+      !confirm(
+        `Bạn có chắc muốn ${action} ${selectedItems.length} món này không?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        "http://localhost:5000/api/admin/menu/bulk-status",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ids: selectedItems,
+            status: newStatus,
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Cập nhật thất bại");
+      }
+
+      alert(`Đã ${action} thành công ${selectedItems.length} món!`);
+      setSelectedItems([]);
+      fetchData();
+    } catch (err) {
+      console.error("Bulk status error:", err);
+      alert("Lỗi khi cập nhật trạng thái. Vui lòng thử lại!");
+    }
+  };
+
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+
+  const handleBulkDelete = async () => {
+    const ids = selectedItems.map(Number);
+
+    const res = await fetch(
+      "http://localhost:5000/api/admin/menu/bulk-delete",
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      }
+    );
+
+    const data = await res.json();
+    alert(data.message);
+    setSelectedItems([]);
+    setShowBulkDeleteModal(false);
+    await fetchData();
   };
 
   if (loading) {
@@ -347,6 +416,71 @@ export default function AdminMenu() {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        {selectedItems.length > 0 && (
+          <div className="mb-4 p-4 bg-cyan-50 border border-cyan-200 rounded-lg flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-cyan-900">
+                Đã chọn <strong>{selectedItems.length}</strong> món
+              </span>
+              <button
+                onClick={() => setSelectedItems([])}
+                className="text-xs text-cyan-700 hover:text-cyan-900 underline"
+              >
+                Bỏ chọn tất cả
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleBulkStatus(1)}
+                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Kích hoạt
+              </button>
+
+              <button
+                onClick={() => handleBulkStatus(0)}
+                className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m0 12.728a9 9 0 0112.728-12.728m-12.728 12.728L18.364 5.636"
+                  />
+                </svg>
+                Hủy kích hoạt
+              </button>
+
+              <button
+                onClick={() => setShowBulkDeleteModal(true)}
+                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Xóa ({selectedItems.length})
+              </button>
+            </div>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -362,16 +496,16 @@ export default function AdminMenu() {
                     className="w-4 h-4 text-cyan-600 rounded border-gray-300"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
                   ID
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
                   Tên món
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
                   Danh mục
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
                   <div className="flex items-center gap-2">
                     Giá / Size
                     <select
@@ -385,10 +519,10 @@ export default function AdminMenu() {
                     </select>
                   </div>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
                   Trạng thái
                 </th>
-                <th className="pr-16 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                <th className="pr-16 py-3 text-right text-xs font-medium text-gray-500">
                   Hành động
                 </th>
               </tr>
@@ -453,7 +587,7 @@ export default function AdminMenu() {
                   <td className="px-4 py-3 text-right space-x-1">
                     <button
                       onClick={() => openEditModal(item)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-cyan-600 rounded hover:bg-cyan-700 mb-1"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-cyan-600 rounded hover:bg-cyan-700"
                     >
                       <Edit className="w-3.5 h-3.5" /> Sửa
                     </button>
@@ -730,7 +864,14 @@ export default function AdminMenu() {
                   <X className="w-5 h-5" />
                 </button>
               </div>
+
               <form onSubmit={handleEdit}>
+                <input
+                  type="hidden"
+                  name="menu_id"
+                  value={editingItem.menu_id}
+                />
+
                 <div className="p-3 space-y-6 h-[600px] overflow-y-auto">
                   <div className="grid grid-cols-6 gap-6 text-left">
                     <div className="col-span-6 sm:col-span-3">
@@ -755,6 +896,7 @@ export default function AdminMenu() {
                         required
                         className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                       >
+                        <option value="">Chọn danh mục</option>
                         {categories.map((cat) => (
                           <option key={cat.category_id} value={cat.category_id}>
                             {cat.category_name}
@@ -766,12 +908,11 @@ export default function AdminMenu() {
                       <label className="text-sm font-medium text-gray-900 block mb-2">
                         Hình ảnh món ăn
                       </label>
-
                       <div className="w-full h-40 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50 relative">
-                        {imagePreview ? (
+                        {imagePreview || editingItem.image_url ? (
                           <>
                             <img
-                              src={imagePreview}
+                              src={imagePreview || `/${editingItem.image_url}`}
                               alt="Preview"
                               className="w-full h-full object-cover"
                             />
@@ -785,7 +926,6 @@ export default function AdminMenu() {
                                 if (input) input.value = "";
                               }}
                               className="absolute top-2 right-2 w-7 h-7 bg-red-600 text-white rounded-full flex items-center justify-center hover:bg-red-700 transition-all shadow-md"
-                              title="Xóa ảnh"
                             >
                               <X className="w-4 h-4" />
                             </button>
@@ -817,7 +957,6 @@ export default function AdminMenu() {
                         onChange={handleImageChange}
                         className="mt-2 block w-full text-sm text-gray-900 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-600 file:text-white hover:file:bg-cyan-700"
                       />
-
                       <p className="mt-1 text-xs text-gray-500">
                         PNG, JPG, JPEG (tối đa 5MB)
                       </p>
@@ -831,75 +970,62 @@ export default function AdminMenu() {
                         rows={3}
                         defaultValue={editingItem.description || ""}
                         className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                      ></textarea>
+                      />
                     </div>
+
                     <div className="col-span-6">
                       <label className="text-sm font-medium text-gray-900 block mb-2">
                         Giá tiền
                       </label>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                          <label className="text-xs font-medium text-gray-700 block mb-1">
-                            Small
-                          </label>
-                          <input
-                            name="price_small"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            required
-                            placeholder="0.00"
-                            className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-700 block mb-1">
-                            Medium
-                          </label>
-                          <input
-                            name="price_medium"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            required
-                            placeholder="0.00"
-                            className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-700 block mb-1">
-                            Large
-                          </label>
-                          <input
-                            name="price_large"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            required
-                            placeholder="0.00"
-                            className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                          />
-                        </div>
+                        {["Small", "Medium", "Large"].map((size) => (
+                          <div key={size}>
+                            <label className="text-xs font-medium text-gray-700 block mb-1">
+                              {size}
+                            </label>
+                            <input
+                              name={`price_${size.toLowerCase()}`}
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              defaultValue={editingItem.prices[size] || ""}
+                              placeholder="0.00"
+                              className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
+                            />
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
                   <div className="mt-4 flex items-center">
                     <input
-                      id="status"
+                      type="hidden"
                       name="status"
+                      id="status_hidden"
+                      value="0"
+                    />
+                    <input
+                      id="status_edit"
                       type="checkbox"
-                      defaultChecked
+                      defaultChecked={editingItem.status === 1}
+                      onChange={(e) => {
+                        const hidden = document.getElementById(
+                          "status_hidden"
+                        ) as HTMLInputElement;
+                        if (hidden) hidden.value = e.target.checked ? "1" : "0";
+                      }}
                       className="w-4 h-4 text-cyan-600 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500 focus:ring-2"
                     />
                     <label
-                      htmlFor="status"
+                      htmlFor="status_edit"
                       className="ml-2 text-sm font-medium text-gray-900"
                     >
                       Kích hoạt món
                     </label>
                   </div>
                 </div>
-                <div className="flex items-center p-6 py-1 border-t border-gray-200 rounded-b space-x-2">
+
+                <div className="flex items-center p-3 py-1 border-t border-gray-200 rounded-b space-x-2">
                   <button
                     type="submit"
                     className="text-white bg-cyan-600 hover:bg-cyan-700 focus:ring-4 focus:ring-cyan-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
@@ -957,6 +1083,46 @@ export default function AdminMenu() {
                 </button>
                 <button
                   onClick={closeModals}
+                  className="text-gray-900 bg-white hover:bg-gray-100 focus:ring-4 focus:ring-cyan-200 border border-gray-200 font-medium inline-flex items-center rounded-lg text-base px-3 py-2.5 text-center"
+                >
+                  No, cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="relative w-full max-w-md p-4">
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-6 pt-3 text-center">
+                <svg
+                  className="w-20 h-20 text-red-600 mx-auto"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+                <h3 className="text-xl font-normal text-gray-500 mt-5 mb-6">
+                  Bạn có chắc muốn xóa{" "}
+                  <strong>{selectedItems.length} món ăn đã chọn không</strong>?
+                </h3>
+                <button
+                  onClick={handleBulkDelete}
+                  className="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-base inline-flex items-center px-3 py-2.5 text-center mr-2"
+                >
+                  Yes, I'm sure
+                </button>
+                <button
+                  onClick={() => setShowBulkDeleteModal(false)}
                   className="text-gray-900 bg-white hover:bg-gray-100 focus:ring-4 focus:ring-cyan-200 border border-gray-200 font-medium inline-flex items-center rounded-lg text-base px-3 py-2.5 text-center"
                 >
                   No, cancel

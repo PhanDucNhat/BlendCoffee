@@ -32,6 +32,12 @@ interface MenuDetail extends RowDataPacket {
   price: number;
 }
 
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = path.join(__dirname, "../../public/images");
@@ -46,10 +52,6 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-
-const app = express();
-app.use(cors());
-app.use(express.json());
 
 // API test kết nối
 app.get("/api/test", async (req: Request, res: Response) => {
@@ -184,6 +186,168 @@ app.get("/api/menu/:id", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Lỗi khi truy vấn singleproduct:", error);
     res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
+  }
+});
+
+app.put(
+  "/api/admin/menu/:id",
+  upload.single("image"),
+  async (req: Request, res: Response) => {
+    const menuId = Number(req.params.id);
+    if (isNaN(menuId)) {
+      return res.status(400).json({ error: "ID không hợp lệ" });
+    }
+
+    const {
+      name,
+      description,
+      category_id,
+      price_small,
+      price_medium,
+      price_large,
+      status,
+    } = req.body;
+    const image_url = req.file ? `images/${req.file.filename}` : null;
+
+    const conn = await db.getConnection();
+    await conn.beginTransaction();
+
+    try {
+      const updateFields: string[] = [];
+      const updateValues: (string | number | null)[] = [];
+
+      if (name) {
+        updateFields.push("name = ?");
+        updateValues.push(name);
+      }
+      if (description !== undefined) {
+        updateFields.push("description = ?");
+        updateValues.push(description || null);
+      }
+      if (category_id) {
+        updateFields.push("category_id = ?");
+        updateValues.push(Number(category_id));
+      }
+      if (image_url) {
+        updateFields.push("image_url = ?");
+        updateValues.push(image_url);
+      }
+      if (status !== undefined) {
+        const statusVal = status === "1" ? 1 : 0;
+        updateFields.push("status = ?");
+        updateValues.push(statusVal);
+      }
+
+      if (updateFields.length > 0) {
+        updateValues.push(menuId);
+        await conn.query(
+          `UPDATE menu SET ${updateFields.join(", ")} WHERE menu_id = ?`,
+          updateValues
+        );
+      }
+
+      const sizes = [
+        { size: "Small", price: parseFloat(price_small || "0") },
+        { size: "Medium", price: parseFloat(price_medium || "0") },
+        { size: "Large", price: parseFloat(price_large || "0") },
+      ].filter((s) => !isNaN(s.price) && s.price > 0);
+
+      await conn.query(`DELETE FROM menu_sizes WHERE menu_id = ?`, [menuId]);
+
+      if (sizes.length > 0) {
+        const values = sizes.map((s) => [menuId, s.size, s.price]);
+        await conn.query(
+          `INSERT INTO menu_sizes (menu_id, size, price) VALUES ?`,
+          [values]
+        );
+      }
+
+      await conn.commit();
+      res.json({ message: "Cập nhật thành công!" });
+    } catch (error) {
+      await conn.rollback();
+      console.error("Lỗi cập nhật món:", error);
+      res.status(500).json({ error: "Không thể cập nhật món" });
+    } finally {
+      conn.release();
+    }
+  }
+);
+
+app.patch("/api/admin/menu/bulk-status", async (req: Request, res: Response) => {
+  const { ids, status } = req.body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "Danh sách ID không hợp lệ" });
+  }
+  if (status !== 0 && status !== 1) {
+    return res.status(400).json({ error: "Trạng thái phải là 0 hoặc 1" });
+  }
+
+  const conn = await db.getConnection();
+
+  try {
+    const placeholders = ids.map(() => "?").join(", ");
+    const query = `UPDATE menu SET status = ? WHERE menu_id IN (${placeholders})`;
+
+    await conn.query(query, [status, ...ids]);
+
+    res.json({ message: "Cập nhật trạng thái thành công", count: ids.length });
+  } catch (error) {
+    console.error("Lỗi bulk update status:", error);
+    res.status(500).json({ error: "Lỗi server khi cập nhật trạng thái" });
+  } finally {
+    conn.release();
+  }
+});
+
+app.delete("/api/admin/menu/bulk-delete", async (req, res) => {
+  const { ids } = req.body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "Danh sách ID không hợp lệ" });
+  }
+
+  const menuIds = ids.filter(id => typeof id === "number" && id > 0);
+
+  try {
+    await db.query("DELETE FROM menu_sizes WHERE menu_id IN (?)", [menuIds]);
+
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM menu WHERE menu_id IN (?)",
+      [menuIds]
+    );
+
+    res.json({ message: `Đã xóa ${result.affectedRows} món ăn!` });
+  } catch (error) {
+    console.error("Lỗi bulk delete:", error);
+    res.status(500).json({ error: "Lỗi server khi xóa" });
+  }
+});
+
+app.delete("/api/admin/menu/:id", async (req, res) => {
+  const id = Number(req.params.id);
+
+  if (!id || id <= 0) {
+    return res.status(400).json({ error: "ID không hợp lệ" });
+  }
+
+  try {
+    await db.query("DELETE FROM menu_sizes WHERE menu_id = ?", [id]);
+
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM menu WHERE menu_id = ?",
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Không tìm thấy món để xóa" });
+    }
+
+    res.json({ message: "Đã xóa món thành công!" });
+  } catch (error) {
+    console.error("Lỗi xóa đơn:", error);
+    res.status(500).json({ error: "Lỗi server khi xóa" });
   }
 });
 
