@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 interface MenuDetail {
   menu_id: number;
@@ -9,7 +9,7 @@ interface MenuDetail {
   category_id: number;
   category_name?: string;
   size: string;
-  price: number; // Đảm bảo price là number
+  price: number;
 }
 
 const SingleProduct: React.FC = () => {
@@ -20,6 +20,8 @@ const SingleProduct: React.FC = () => {
   const [quantity, setQuantity] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -52,7 +54,7 @@ const SingleProduct: React.FC = () => {
 
         const normalizedData = data.map((item) => ({
           ...item,
-          price: Number(item.price), // ← QUAN TRỌNG: Chuyển string → number
+          price: Number(item.price),
         }));
 
         const baseProduct = normalizedData[0];
@@ -135,7 +137,7 @@ const SingleProduct: React.FC = () => {
               <h1 className="text-3xl font-bold uppercase">{product.name}</h1>
 
               <p className="text-3xl font-bold text-yellow-500">
-                ${currentPrice.toFixed(2)}
+                ${currentPrice.toFixed(3)}
               </p>
 
               <div className="text-gray-400 text-sm space-y-4">
@@ -183,7 +185,44 @@ const SingleProduct: React.FC = () => {
                 </button>
               </div>
 
-              <button className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-3 px-8 rounded-md uppercase transition">
+              <button
+                onClick={async () => {
+                  const token = localStorage.getItem("token");
+                  if (!token) {
+                    alert("Vui lòng đăng nhập để thêm vào giỏ hàng!");
+                    navigate("/login");
+                    return;
+                  }
+
+                  try {
+                    const response = await fetch(
+                      "http://localhost:5000/api/cart/add",
+                      {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({
+                          menu_id: product.menu_id,
+                          size: selectedSize,
+                          quantity: quantity,
+                        }),
+                      }
+                    );
+
+                    const data = await response.json();
+                    if (response.ok) {
+                      alert("Đã thêm vào giỏ hàng!");
+                    } else {
+                      alert(data.message || "Lỗi khi thêm vào giỏ");
+                    }
+                  } catch {
+                    alert("Lỗi kết nối server");
+                  }
+                }}
+                className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-3 px-8 rounded-md uppercase transition"
+              >
                 Add to Cart
               </button>
             </div>

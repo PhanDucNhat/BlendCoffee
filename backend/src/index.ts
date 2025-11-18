@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { db } from "./db.js";
 import bcrypt from "bcrypt"; //mã hóa mk
@@ -32,6 +32,13 @@ interface MenuDetail extends RowDataPacket {
   price: number;
 }
 
+interface AuthRequest extends Request {
+  user?: {
+    id: number;
+    role: string;
+  };
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
@@ -52,6 +59,25 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+const JWT_SECRET = "secretkey";
+
+const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "Không có token" });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ message: "Token không hợp lệ hoặc đã hết hạn" });
+    }
+
+    req.user = decoded as { id: number; role: string };
+    next();
+  });
+};
 
 // API test kết nối
 app.get("/api/test", async (req: Request, res: Response) => {
@@ -407,6 +433,148 @@ app.get("/api/user", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Lỗi khi truy vấn user:", error);
     res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
+  }
+});
+
+app.get("/api/cart", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+
+  try {
+    const [cartRows] = await db.query<RowDataPacket[]>(
+      "SELECT cart_id FROM cart WHERE id = ?",
+      [userId]
+    );
+
+    let cartId: number;
+
+    if (cartRows.length === 0) {
+      const [newCart] = await db.query<ResultSetHeader>(
+        "INSERT INTO cart (id) VALUES (?)",
+        [userId]
+      );
+      cartId = newCart.insertId;
+    } else {
+      cartId = (cartRows[0] as { cart_id: number }).cart_id;
+    }
+
+    const [items] = await db.query<RowDataPacket[]>(
+      `
+      SELECT 
+        ci.cart_item_id,
+        ci.menu_id,
+        ci.size,
+        ci.quantity,
+        ci.price,
+        m.name,
+        m.description,
+        m.image_url
+      FROM cart_items ci
+      JOIN menu m ON ci.menu_id = m.menu_id
+      WHERE ci.cart_id = ?
+    `,
+      [cartId]
+    );
+
+    res.json(items);
+  } catch (error) {
+    console.error("Lỗi lấy giỏ hàng:", error);
+    res.status(500).json({ error: "Lỗi server" });
+  }
+});
+
+app.post("/api/cart/add", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const { menu_id, size, quantity = 1 } = req.body;
+
+  if (!menu_id || !size) {
+    return res.status(400).json({ message: "Thiếu thông tin sản phẩm" });
+  }
+
+  const conn = await db.getConnection();
+  await conn.beginTransaction();
+
+  try {
+    const [cartRows] = await conn.query<RowDataPacket[]>(
+      "SELECT cart_id FROM cart WHERE id = ?",
+      [userId]
+    );
+
+    let cartId: number;
+    if (cartRows.length === 0) {
+      const [newCart] = await conn.query<ResultSetHeader>(
+        "INSERT INTO cart (id) VALUES (?)",
+        [userId]
+      );
+      cartId = newCart.insertId;
+    } else {
+      cartId = (cartRows[0] as { cart_id: number }).cart_id;
+    }
+
+    const [priceRows] = await conn.query<RowDataPacket[]>(
+      "SELECT price FROM menu_sizes WHERE menu_id = ? AND size = ?",
+      [menu_id, size]
+    );
+
+    if (priceRows.length === 0) {
+      await conn.rollback();
+      return res.status(400).json({ message: "Kích thước không hợp lệ cho sản phẩm này" });
+    }
+    const price = (priceRows[0] as { price: number }).price;
+
+    const [existingRows] = await conn.query<RowDataPacket[]>(
+      "SELECT cart_item_id FROM cart_items WHERE cart_id = ? AND menu_id = ? AND size = ?",
+      [cartId, menu_id, size]
+    );
+
+    if (existingRows.length > 0) {
+      const cartItemId = (existingRows[0] as { cart_item_id: number }).cart_item_id;
+      await conn.query(
+        "UPDATE cart_items SET quantity = quantity + ? WHERE cart_item_id = ?",
+        [quantity, cartItemId]
+      );
+    } else {
+      await conn.query(
+        "INSERT INTO cart_items (cart_id, menu_id, size, quantity, price) VALUES (?, ?, ?, ?, ?)",
+        [cartId, menu_id, size, quantity, price]
+      );
+    }
+
+    await conn.commit();
+    res.json({ message: "Đã thêm vào giỏ hàng!" });
+  } catch (error) {
+    await conn.rollback();
+    console.error("Lỗi thêm vào giỏ hàng:", error);
+    res.status(500).json({ error: "Lỗi server" });
+  } finally {
+    conn.release();
+  }
+});
+
+app.delete("/api/cart/item/:cart_item_id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const cart_item_id = Number(req.params.cart_item_id);
+
+  if (!cart_item_id || isNaN(cart_item_id)) {
+    return res.status(400).json({ message: "ID không hợp lệ" });
+  }
+
+  try {
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT 1 FROM cart_items ci 
+       JOIN cart c ON ci.cart_id = c.cart_id 
+       WHERE ci.cart_item_id = ? AND c.id = ?`,
+      [cart_item_id, userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Không tìm thấy món" });
+    }
+
+    await db.query("DELETE FROM cart_items WHERE cart_item_id = ?", [cart_item_id]);
+    res.json({ message: "Đã xóa" });
+  } catch (error) {
+    console.error("Lỗi xóa món:", error);
+    res.status(500).json({ error: "Lỗi server" });
   }
 });
 

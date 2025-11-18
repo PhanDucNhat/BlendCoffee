@@ -25,7 +25,7 @@ const Checkout = () => {
               <form className="space-y-6 text-left">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-white">
                   <div>
-                    <label className="block text-sm mb-1">First Name</label>
+                    <label className="block text-sm mb-1">Full Name</label>
                     <input
                       type="text"
                       className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-500 focus:border-white outline-none"
@@ -33,7 +33,7 @@ const Checkout = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm mb-1">Last Name</label>
+                    <label className="block text-sm mb-1">Phone</label>
                     <input
                       type="text"
                       className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-500 focus:border-white outline-none"
@@ -41,44 +41,43 @@ const Checkout = () => {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm mb-1">State / Country</label>
-                  <select className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white appearance-none">
-                    <option>France</option>
-                    <option>USA</option>
-                    <option>Vietnam</option>
-                  </select>
-                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm mb-1">Street Address</label>
-                    <input
-                      type="text"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-500"
-                      placeholder="House number and street name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1">&nbsp;</label>
-                    <input
-                      type="text"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-500"
-                      placeholder="Appartment, suite, unit etc. (optional)"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1">Town / City</label>
-                    <input
-                      type="text"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-500"
-                      placeholder=""
-                    />
+                    <label className="block text-sm mb-1">Province</label>
+                    <select className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white appearance-none">
+                      <option>---</option>
+                      <option>France</option>
+                      <option>USA</option>
+                      <option>Vietnam</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm mb-1">
-                      Postcode / ZIP *
+                      District (optional)
+                    </label>
+                    <select className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white appearance-none">
+                      <option>---</option>
+                      <option>France</option>
+                      <option>USA</option>
+                      <option>Vietnam</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm mb-1">
+                      Ward/commune (optional)
+                    </label>
+                    <select className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white appearance-none">
+                      <option>---</option>
+                      <option>France</option>
+                      <option>USA</option>
+                      <option>Vietnam</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">
+                      Address (optional)
                     </label>
                     <input
                       type="text"
@@ -87,47 +86,21 @@ const Checkout = () => {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-sm mb-1">Phone</label>
+                    <label className="block text-sm mb-1">Note</label>
                     <input
                       type="text"
                       className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-500"
                       placeholder=""
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-500"
-                      placeholder=""
-                    />
-                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-20 pt-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="option"
-                      className="w-4 h-4 text-cyan-500 focus:ring-cyan-500"
-                    />
-                    <span className="text-sm whitespace-nowrap">
-                      Create an Account?
-                    </span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="option"
-                      className="w-4 h-4 text-cyan-500 focus:ring-cyan-500"
-                      defaultChecked
-                    />
-                    <span className="text-sm whitespace-nowrap">
-                      Ship to different address
-                    </span>
-                  </label>
+                <div className="flex flex-wrap items-center gap-2 pt-4">
+                  <input type="checkbox" className="w-4 h-4 text-cyan-500" />
+                  <span className="text-xs text-gray-300">
+                    Add to register address
+                  </span>
                 </div>
               </form>
             </div>
@@ -189,11 +162,7 @@ const Checkout = () => {
                 </div>
 
                 <label className="flex items-center gap-3 mt-6 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 text-cyan-500"
-                    defaultChecked
-                  />
+                  <input type="checkbox" className="w-4 h-4 text-cyan-500" />
                   <span className="text-xs text-gray-300">
                     I have read and accept the terms and conditions
                   </span>
