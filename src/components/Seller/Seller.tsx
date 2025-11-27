@@ -40,7 +40,7 @@ const Seller: React.FC = () => {
   }, []);
 
   return (
-    <div className="w-full bg-[#0d0d0d] text-white py-20">
+    <div className="w-full bg-[#0d0d0d] text-white py-12">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-14">
           <span className="text-[#b6894b] italic text-2xl">Discover</span>

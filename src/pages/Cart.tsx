@@ -114,7 +114,7 @@ const Cart: React.FC = () => {
   return (
     <>
       <div
-        className="relative h-[13vh] bg-cover bg-center"
+        className="relative h-[11vh] bg-cover bg-center"
         style={{ backgroundImage: "url('/images/bg_2.jpg')" }}
       ></div>
 

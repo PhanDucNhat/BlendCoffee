@@ -182,7 +182,7 @@ const Navbar: React.FC = () => {
 
                   <li>
                     <Link
-                      to="/profile"
+                      to={`/profile/${user.id}`}
                       className="block px-3 py-2 text-sm text-gray-200 hover:text-[#b6894b] hover:bg-[#2a2c2e] transition duration-200"
                     >
                       Thông tin tài khoản
@@ -190,7 +190,7 @@ const Navbar: React.FC = () => {
                   </li>
                   <li>
                     <Link
-                      to="/orders"
+                      to="/order"
                       className="block px-3 py-2 text-sm text-gray-200 hover:text-[#b6894b] hover:bg-[#2a2c2e] transition duration-200"
                     >
                       Đơn hàng
@@ -198,7 +198,7 @@ const Navbar: React.FC = () => {
                   </li>
                   <li>
                     <Link
-                      to="/change-password"
+                      to="/changepassword"
                       className="block px-3 py-2 text-sm text-gray-200 hover:text-[#b6894b] hover:bg-[#2a2c2e] transition duration-200"
                     >
                       Đổi mật khẩu

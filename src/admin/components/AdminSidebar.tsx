@@ -31,13 +31,36 @@ export default function AdminSidebar() {
           Quản lý menu
         </Link>
         <Link
-          to="/admin/posts"
+          to="/admin/blog"
           className="flex items-center hover:bg-gray-700 p-2 rounded transition"
         >
           <i className="fa-solid fa-pen-to-square mr-3 w-5"></i>
           Quản lý bài viết
         </Link>
+        <Link
+          to="/admin/user"
+          className="flex items-center hover:bg-gray-700 p-2 rounded transition"
+        >
+          <i className="fa-solid fa-user mr-3 w-5"></i>
+          Quản lý nhân sự
+        </Link>
+        <Link
+          to="/admin/voucher"
+          className="flex items-center hover:bg-gray-700 p-2 rounded transition"
+        >
+          <i className="fa-solid fa-ticket mr-3 w-5"></i>
+          Quản lý voucher
+        </Link>
       </nav>
+      <div className="p-4 space-y-3 overflow-y-auto text-red-500">
+        <Link
+          to="/login"
+          className="flex items-center hover:bg-gray-700 p-2 rounded transition "
+        >
+          <i className="fa-solid fa-arrow-right-from-bracket mr-3 w-5"></i>
+          Đăng xuất
+        </Link>
+      </div>
     </div>
   );
 }

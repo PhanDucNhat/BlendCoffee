@@ -543,10 +543,10 @@ export default function AdminMenu() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 overflow-hidden">
+                      <div className="w-[53px] h-[53px] rounded-full bg-gray-200 border-2 border-dashed border-gray-400 overflow-hidden">
                         {item.image_url ? (
                           <img
-                            src={`/${item.image_url}`}
+                            src={`${item.image_url}`}
                             alt={item.name}
                             className="w-full h-full object-cover"
                           />
@@ -896,7 +896,6 @@ export default function AdminMenu() {
                         required
                         className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                       >
-                        <option value="">Chọn danh mục</option>
                         {categories.map((cat) => (
                           <option key={cat.category_id} value={cat.category_id}>
                             {cat.category_name}
@@ -912,7 +911,7 @@ export default function AdminMenu() {
                         {imagePreview || editingItem.image_url ? (
                           <>
                             <img
-                              src={imagePreview || `/${editingItem.image_url}`}
+                              src={imagePreview || `${editingItem.image_url}`}
                               alt="Preview"
                               className="w-full h-full object-cover"
                             />
