@@ -125,7 +125,7 @@ const SingleProduct: React.FC = () => {
               <img
                 src={
                   product.image_url
-                    ? `/${product.image_url}`
+                    ? `${product.image_url}`
                     : "/images/default.jpg"
                 }
                 alt={product.name}

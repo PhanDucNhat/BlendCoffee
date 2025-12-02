@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {
   Eye,
   ChevronDown,
@@ -6,124 +7,221 @@ import {
   X,
   CheckCircle2,
   Truck,
-  Package,
   Clock,
   User,
   Phone,
   MapPin,
-  CalendarCheck,
+  CircleX,
 } from "lucide-react";
 
-type OrderStatus = "delivered" | "shipped" | "processing" | "pending";
+type OrderStatus = "pending" | "processing" | "completed" | "canceled";
 
 interface OrderItem {
   name: string;
   quantity: number;
   price: number;
-}
-
-interface ShippingInfo {
-  name: string;
-  phone: string;
-  address: string;
-  deliveredAt: string | null;
-}
-
-interface PriceInfo {
-  subtotal: number;
-  shipping: number;
-  discount: number;
-  final: number;
+  size?: string;
+  image_url: string;
 }
 
 interface Order {
-  id: string;
-  date: string;
-  time: string;
-  payment: string;
+  order_id: number;
   total: number;
+  payment_method: "cash" | "bank_transfer";
   status: OrderStatus;
+  created_at: string;
+  delivery_fee: number | null;
+  discount: number | null;
+  fullname: string;
+  phone: string;
+  full_address: string;
+  voucher_code?: string;
   items: OrderItem[];
-  shipping: ShippingInfo;
-  price: PriceInfo;
 }
 
-const orders: Order[] = [
-  {
-    id: "DH2025041",
-    date: "15/04/2025",
-    time: "14:30",
-    payment: "COD",
-    total: 2250000,
-    status: "delivered",
-    items: [
-      { name: "Tai nghe Gaming RGB Pro X", quantity: 1, price: 850000 },
-      { name: "Chuột Logitech G502 Hero", quantity: 2, price: 700000 },
-    ],
-    shipping: {
-      name: "Nguyễn Văn An",
-      phone: "0901234567",
-      address: "123 Đường Láng, Đống Đa, Hà Nội",
-      deliveredAt: "17/04/2025 10:25",
-    },
-    price: { subtotal: 2250000, shipping: 35000, discount: 0, final: 2285000 },
-  },
-  {
-    id: "DH2025038",
-    date: "12/04/2025",
-    time: "21:10",
-    payment: "Chuyển khoản",
-    total: 1890000,
-    status: "shipped",
-    items: [
-      { name: "Bàn phím cơ Keychron K8 Pro", quantity: 1, price: 1890000 },
-    ],
-    shipping: {
-      name: "Trần Thị Mai",
-      phone: "0987654321",
-      address: "56 Nguyễn Trãi, Thanh Xuân, Hà Nội",
-      deliveredAt: null,
-    },
-    price: { subtotal: 1890000, shipping: 0, discount: 100000, final: 1790000 },
-  },
-  {
-    id: "DH2025037",
-    date: "12/04/2025",
-    time: "09:45",
-    payment: "Momo",
-    total: 5880000,
-    status: "processing",
-    items: [
-      { name: 'Màn hình LG UltraGear 27" 144Hz', quantity: 1, price: 5490000 },
-      { name: "Giá đỡ màn hình North Bayou", quantity: 1, price: 390000 },
-    ],
-    shipping: {
-      name: "Lê Văn Hùng",
-      phone: "0912345678",
-      address: "89 Lê Lợi, Quận 1, TP.HCM",
-      deliveredAt: null,
-    },
-    price: {
-      subtotal: 5880000,
-      shipping: 45000,
-      discount: 200000,
-      final: 5925000,
-    },
-  },
-];
+// const orders: Order[] = [
+//   {
+//     id: "DH2025041",
+//     date: "15/04/2025",
+//     time: "14:30",
+//     payment: "COD",
+//     total: 2250000,
+//     status: "delivered",
+//     items: [
+//       { name: "Tai nghe Gaming RGB Pro X", quantity: 1, price: 850000 },
+//       { name: "Chuột Logitech G502 Hero", quantity: 2, price: 700000 },
+//     ],
+//     shipping: {
+//       name: "Nguyễn Văn An",
+//       phone: "0901234567",
+//       address: "123 Đường Láng, Đống Đa, Hà Nội",
+//       deliveredAt: "17/04/2025 10:25",
+//     },
+//     price: { subtotal: 2250000, shipping: 35000, discount: 0, final: 2285000 },
+//   },
+//   {
+//     id: "DH2025038",
+//     date: "12/04/2025",
+//     time: "21:10",
+//     payment: "Chuyển khoản",
+//     total: 1890000,
+//     status: "shipped",
+//     items: [
+//       { name: "Bàn phím cơ Keychron K8 Pro", quantity: 1, price: 1890000 },
+//     ],
+//     shipping: {
+//       name: "Trần Thị Mai",
+//       phone: "0987654321",
+//       address: "56 Nguyễn Trãi, Thanh Xuân, Hà Nội",
+//       deliveredAt: null,
+//     },
+//     price: { subtotal: 1890000, shipping: 0, discount: 100000, final: 1790000 },
+//   },
+//   {
+//     id: "DH2025037",
+//     date: "12/04/2025",
+//     time: "09:45",
+//     payment: "Momo",
+//     total: 5880000,
+//     status: "processing",
+//     items: [
+//       { name: 'Màn hình LG UltraGear 27" 144Hz', quantity: 1, price: 5490000 },
+//       { name: "Giá đỡ màn hình North Bayou", quantity: 1, price: 390000 },
+//     ],
+//     shipping: {
+//       name: "Lê Văn Hùng",
+//       phone: "0912345678",
+//       address: "89 Lê Lợi, Quận 1, TP.HCM",
+//       deliveredAt: null,
+//     },
+//     price: {
+//       subtotal: 5880000,
+//       shipping: 45000,
+//       discount: 200000,
+//       final: 5925000,
+//     },
+//   },
+// ];
 
 const statusInfo = {
-  delivered: { label: "Đã giao", icon: CheckCircle2, color: "text-green-400" },
-  shipped: { label: "Đang giao", icon: Truck, color: "text-orange-400" },
-  processing: { label: "Đang xử lý", icon: Package, color: "text-blue-400" },
-  pending: { label: "Chờ xác nhận", icon: Clock, color: "text-gray-400" },
+  completed: { label: "Đã giao", icon: CheckCircle2, color: "text-green-400" },
+  processing: { label: "Đang giao", icon: Truck, color: "text-orange-400" },
+  pending: { label: "Chờ xác nhận", icon: Clock, color: "text-yellow-400" },
+  canceled: { label: "Đã hủy", icon: CircleX, color: "text-red-400" },
 };
 
 const f = (money: number) => money.toLocaleString("vi-VN") + "₫";
 
 export default function OrderPage() {
-  const [openItem, setOpenItem] = useState<string | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openItem, setOpenItem] = useState<number | null>(null);
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get("http://localhost:5000/api/orders", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setOrders(res.data as Order[]);
+      } catch (err) {
+        console.error("Lỗi tải đơn hàng:", err);
+        alert("Không thể tải đơn hàng. Vui lòng đăng nhập lại.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("vi-VN");
+  };
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const handleCancelOrder = async (orderId: number) => {
+    if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) {
+      return false;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      return false;
+    }
+
+    try {
+      await axios.post(
+        `http://localhost:5000/api/orders/${orderId}/cancel`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.order_id === orderId ? { ...o, status: "canceled" as const } : o
+        )
+      );
+
+      if (detailOrder?.order_id === orderId) {
+        setDetailOrder((prev) =>
+          prev ? { ...prev, status: "canceled" as const } : null
+        );
+      }
+
+      alert("Đã hủy đơn hàng thành công!");
+      return true;
+    } catch (err) {
+      console.error("Lỗi tải giỏ hàng:", err);
+      alert("Không thể tải thông tin giỏ hàng. Vui lòng thử lại!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-xl">Đang tải đơn hàng...</div>
+      </div>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <>
+        <div
+          className="relative h-[11vh] bg-cover bg-center"
+          style={{ backgroundImage: "url('/images/bg_2.jpg')" }}
+        ></div>
+        <div className="bg-black min-h-screen text-white px-6">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-2xl font-bold text-yellow-500 mb-4">
+              Chưa có đơn hàng nào
+            </h2>
+            <p className="text-gray-400">
+              Khi bạn đặt hàng, chúng sẽ xuất hiện ở đây.
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -135,7 +233,8 @@ export default function OrderPage() {
         <div className="max-w-4xl mx-auto space-y-6">
           {Object.entries(
             orders.reduce((group, order) => {
-              (group[order.date] = group[order.date] || []).push(order);
+              const dateKey = formatDate(order.created_at);
+              (group[dateKey] = group[dateKey] || []).push(order);
               return group;
             }, {} as Record<string, Order[]>)
           )
@@ -151,28 +250,32 @@ export default function OrderPage() {
                 </div>
 
                 {list.map((order) => {
-                  const status = statusInfo[order.status];
+                  const status = statusInfo[order.status] || statusInfo.pending;
                   const Icon = status.icon;
-                  const isOpen = openItem === order.id;
+                  const isOpen = openItem === order.order_id;
 
                   return (
                     <div
-                      key={order.id}
+                      key={order.order_id}
                       className="bg-gray-900/80 border border-gray-800 rounded-xl overflow-hidden hover:border-yellow-600/60 transition-all"
                     >
                       <div className="p-4 flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 text-sm">
                             <span className="font-bold text-yellow-400">
-                              {order.id}
+                              DH{order.order_id.toString().padStart(6, "0")}
                             </span>
-                            <span className="text-gray-50">{order.time}</span>
+                            <span className="text-gray-50">
+                              {formatTime(order.created_at)}
+                            </span>
                             <span className="text-gray-100">
                               {order.items.length} sản phẩm
                             </span>
                           </div>
                           <div className="text-xs text-gray-400 mt-1">
-                            {order.payment}
+                            {order.payment_method === "cash"
+                              ? "Thanh toán khi nhận hàng"
+                              : "Chuyển khoản"}
                           </div>
                         </div>
 
@@ -192,7 +295,7 @@ export default function OrderPage() {
                           </div>
                           <button
                             onClick={() =>
-                              setOpenItem(isOpen ? null : order.id)
+                              setOpenItem(isOpen ? null : order.order_id)
                             }
                             className="p-2 hover:bg-gray-800 rounded-lg"
                           >
@@ -212,18 +315,49 @@ export default function OrderPage() {
                               className="flex items-center justify-between text-sm"
                             >
                               <div className="flex items-center gap-3 text-white">
-                                <div className="w-10 h-10 bg-gray-800 rounded-lg" />
-                                <div>
-                                  <p className="text-xs">{item.name}</p>
-                                  <p className="text-xs mt-1">
-                                    SL: {item.quantity}
-                                  </p>
+                                <img
+                                  src={
+                                    item.image_url || "/images/placeholder.jpg"
+                                  }
+                                  alt=""
+                                  className="w-10 h-10 rounded-lg object-cover bg-gray-800"
+                                />
+                                <div className="flex">
+                                  <div>
+                                    <p className="text-sm">{item.name}</p>
+                                    {item.size && (
+                                      <p className="text-xs text-white flex">
+                                        Size:{" "}
+                                        <p className="text-gray-400 px-2">
+                                          {item.size}
+                                        </p>{" "}
+                                        x{item.quantity}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                              <p className="font-medium">{f(item.price)}</p>
+                              <p className="font-medium">
+                                {item.price.toFixed(2)}đ
+                              </p>
                             </div>
                           ))}
                           <div className="pt-3 border-t border-gray-700 flex justify-end">
+                            {order.status === "pending" ? (
+                              <button
+                                onClick={() =>
+                                  handleCancelOrder(order.order_id)
+                                }
+                                className="text-red-500 pr-4 underline hover:text-red-400 transition"
+                              >
+                                Hủy đơn
+                              </button>
+                            ) : (
+                              <span className="text-gray-500 pr-4">
+                                Hủy đơn
+                              </span>
+                            )}
+
                             <button
                               onClick={() => setDetailOrder(order)}
                               className="text-xs text-yellow-400 hover:text-yellow-300 font-medium flex items-center gap-1 transition"
@@ -246,7 +380,8 @@ export default function OrderPage() {
           <div className="bg-gray-900 border border-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gray-900 border-b border-gray-800 p-2 flex justify-between items-center">
               <h2 className="text-xl font-bold text-yellow-400">
-                Chi tiết đơn {detailOrder.id}
+                Chi tiết đơn DH
+                {detailOrder.order_id.toString().padStart(6, "0")}
               </h2>
               <button
                 onClick={() => setDetailOrder(null)}
@@ -263,21 +398,20 @@ export default function OrderPage() {
                 </h3>
                 <div className="space-y-3 text-sm">
                   <div className="flex gap-3 text-white">
-                    <User className="w-4 h-4" /> {detailOrder.shipping.name}
+                    <User className="w-4 h-4" /> {detailOrder.fullname}
                   </div>
                   <div className="flex gap-3 text-white">
-                    <Phone className="w-4 h-4" /> {detailOrder.shipping.phone}
+                    <Phone className="w-4 h-4" /> {detailOrder.phone}
                   </div>
                   <div className="flex gap-3 text-white">
-                    <MapPin className="w-4 h-4" />{" "}
-                    {detailOrder.shipping.address}
+                    <MapPin className="w-4 h-4" /> {detailOrder.full_address}
                   </div>
-                  {detailOrder.shipping.deliveredAt && (
+                  {/* {detailOrder.shipping.deliveredAt && (
                     <div className="flex gap-3 text-green-400">
                       <CalendarCheck className="w-4 h-4" /> Đã giao:{" "}
                       {detailOrder.shipping.deliveredAt}
                     </div>
-                  )}
+                  )} */}
                 </div>
               </div>
               <div>
@@ -287,14 +421,25 @@ export default function OrderPage() {
                     key={i}
                     className="flex gap-4 bg-gray-600 rounded-lg p-2 mb-3 text-white"
                   >
-                    <div className="w-20 h-20 bg-white rounded-lg" />
+                    <img
+                      src={item.image_url || "/images/placeholder.jpg"}
+                      alt=""
+                      className="w-20 h-20 rounded-lg object-cover"
+                    />
                     <div className="flex-1">
                       <p className="font-medium">{item.name}</p>
+                      {item.size && (
+                        <p className="text-sm text-gray-400">
+                          Size: {item.size}
+                        </p>
+                      )}
                       <p className="text-sm text-gray-400">
                         Số lượng: {item.quantity}
                       </p>
                     </div>
-                    <p className="font-bold text-lg">{f(item.price)}</p>
+                    <p className="font-bold text-lg">
+                      {item.price.toFixed(2)}đ
+                    </p>
                   </div>
                 ))}
               </div>
@@ -305,25 +450,34 @@ export default function OrderPage() {
                 <div className="space-y-2 text-sm text-white">
                   <div className="flex justify-between">
                     <span>Tổng tiền hàng</span>
-                    <span>{f(detailOrder.price.subtotal)}</span>
+                    <span>
+                      {detailOrder.items
+                        .reduce((sum, item) => sum + item.price, 0)
+                        .toFixed(2)}
+                      đ
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Phí vận chuyển</span>
                     <span>
-                      {detailOrder.price.shipping === 0
+                      {(detailOrder.delivery_fee || 0) === 0
                         ? "Miễn phí"
-                        : f(detailOrder.price.shipping)}
+                        : f(detailOrder.delivery_fee!)}
                     </span>
                   </div>
-                  {detailOrder.price.discount > 0 && (
+                  {detailOrder.discount && detailOrder.discount > 0 && (
                     <div className="flex justify-between text-red-400">
-                      <span>Giảm giá</span>
-                      <span>-{f(detailOrder.price.discount)}</span>
+                      <span>
+                        Giảm giá{" "}
+                        {detailOrder.voucher_code &&
+                          `(${detailOrder.voucher_code})`}
+                      </span>
+                      <span>-{f(detailOrder.discount)}</span>
                     </div>
                   )}
                   <div className="pt-3 border-t border-gray-700 flex justify-between text-lg font-bold text-yellow-400">
                     <span>Thành tiền</span>
-                    <span>{f(detailOrder.price.final)}</span>
+                    <span>{f(detailOrder.total)}</span>
                   </div>
                 </div>
               </div>

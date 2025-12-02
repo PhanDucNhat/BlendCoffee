@@ -4,11 +4,14 @@ import { db } from "./db.js";
 import bcrypt from "bcrypt"; //mã hóa mk
 import jwt from "jsonwebtoken"; //xác thực users
 import { RowDataPacket, ResultSetHeader } from "mysql2";
+import { PoolConnection } from "mysql2/promise";
 
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { error } from "console";
+// import { use } from "react";
 // import { ReceiptEuroIcon } from "lucide-react";
 // import { error } from "console";
 
@@ -35,6 +38,127 @@ interface MenuDetail extends RowDataPacket {
   size: string;
   price: number;
 }
+
+interface CheckoutBilling {
+  fullName: string;
+  phone: string;
+  address: string;
+  provinceId?: string | null;
+  provinceName?: string | null;
+  districtId?: string | null;
+  districtName?: string | null;
+  wardId?: string | null;
+  wardName?: string | null;
+}
+
+interface CheckoutPayload {
+  billing: CheckoutBilling;
+  note?: string;
+  voucherCode?: string | null;
+  paymentMethod?: "cash" | "bank_transfer";
+}
+
+interface CartItemRow extends RowDataPacket {
+  cart_item_id: number;
+  menu_id: number;
+  size: string;
+  quantity: number;
+  price: number;
+}
+
+interface VoucherRow extends RowDataPacket {
+  voucher_id: number;
+  title: string;
+  status: number;
+  quantity: number;
+  start_date: string | Date;
+  end_date: string | Date;
+  discount_type: "percent" | "fixed";
+  discount_value: number;
+}
+
+interface OrderDetailRow extends RowDataPacket {
+  order_id: number;
+  total: number;
+  payment_method: "cash" | "bank_transfer";
+  status: "pending" | "processing" | "completed" | "canceled";
+  created_at: Date;
+  delivery_fee: number | null;
+  discount: number | null;
+  voucher_id: number | null;
+  fullname: string | null;
+  phone: string | null;
+  note: string | null;
+  full_address: string | null;
+  menu_name: string | null;
+  image_url: string | null;
+  size: "Small" | "Medium" | "Large" | null;
+  quantity: number | null;
+  item_price: number | null;
+}
+
+const fetchCartDetails = async (conn: PoolConnection, userId: number) => {
+  const [cartRows] = await conn.query<RowDataPacket[]>(
+    "SELECT cart_id FROM cart WHERE id = ?",
+    [userId]
+  );
+
+  if (cartRows.length === 0) {
+    return { cartId: null, items: [], subtotal: 0 };
+  }
+
+  const cartId = (cartRows[0] as { cart_id: number }).cart_id;
+
+  const [items] = await conn.query<CartItemRow[]>(
+    `SELECT cart_item_id, menu_id, size, quantity, price
+     FROM cart_items
+     WHERE cart_id = ?`,
+    [cartId]
+  );
+
+  const subtotal = items.reduce(
+    (sum, item) => sum + Number(item.price) * item.quantity,
+    0
+  );
+
+  return { cartId, items, subtotal };
+};
+
+const fetchVoucher = async (
+  conn: PoolConnection,
+  voucherCode: string,
+  lock: boolean
+): Promise<VoucherRow | null> => {
+  if (!voucherCode.trim()) return null;
+
+  const query = lock
+    ? "SELECT * FROM voucher WHERE title = ? FOR UPDATE"
+    : "SELECT * FROM voucher WHERE title = ?";
+
+  const [voucherRows] = await conn.query<VoucherRow[]>(query, [
+    voucherCode.trim(),
+  ]);
+
+  if (voucherRows.length === 0) return null;
+
+  return voucherRows[0];
+};
+
+const validateVoucherActive = (voucher: VoucherRow) => {
+  const now = new Date();
+  const start = new Date(voucher.start_date);
+  const end = new Date(voucher.end_date);
+
+  return voucher.status === 1 && voucher.quantity > 0 && now >= start && now <= end;
+};
+
+const calculateDiscountAmount = (voucher: VoucherRow, subtotal: number) => {
+  if (voucher.discount_type === "percent") {
+    return (subtotal * Number(voucher.discount_value)) / 100;
+  }
+
+  return Number(voucher.discount_value);
+};
 
 interface AuthRequest extends Request {
   user?: {
@@ -67,8 +191,8 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-  cb(null, file.originalname);
-}
+    cb(null, file.originalname);
+  }
 });
 
 const upload = multer({ storage });
@@ -124,7 +248,7 @@ app.get("/api/voucher", async (req: Request, res: Response) => {
 });
 
 app.post("/api/admin/voucher/add", upload.single("image"), async (req: Request, res: Response) => {
-  const {title, description, quantity, start_date, end_date, status, discount_type, discount_value} = req.body;
+  const { title, description, quantity, start_date, end_date, status, discount_type, discount_value } = req.body;
   const image_url = req.file ? `/images/${req.file.filename}` : null;
 
   try {
@@ -143,10 +267,10 @@ app.post("/api/admin/voucher/add", upload.single("image"), async (req: Request, 
         discount_value,
       ]
     );
-    res.json({message: "Thêm voucher thành công!", voucher_id: result.insertId });
+    res.json({ message: "Thêm voucher thành công!", voucher_id: result.insertId });
   } catch (error) {
     console.error("Lỗi thêm voucher:", error);
-    res.status(500).json({error: "Không thể thêm voucher"});
+    res.status(500).json({ error: "Không thể thêm voucher" });
   }
 });
 
@@ -250,19 +374,19 @@ app.put("/api/admin/voucher/:id", upload.single("image"), async (req: Request, r
   }
 });
 
-app.delete("/api/admin/voucher/:id", async (req: Request, res:Response) => {
+app.delete("/api/admin/voucher/:id", async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  if (!id || id <= 0) return res.status(400).json({ error: "ID không hợp lệ"});
+  if (!id || id <= 0) return res.status(400).json({ error: "ID không hợp lệ" });
 
   try {
     const [result] = await db.query<ResultSetHeader>(`DELETE FROM voucher WHERE voucher_id = ?`, [id])
-    if (result.affectedRows === 0){
-      return res.status(400).json({ error: "Không tìm thấy voucher"});
+    if (result.affectedRows === 0) {
+      return res.status(400).json({ error: "Không tìm thấy voucher" });
     }
-    res.json({ message: "Xóa voucher thành công!"});
+    res.json({ message: "Xóa voucher thành công!" });
   } catch (error) {
     console.error("Lỗi xóa voucher:", error);
-    res.status(500).json({error: "Lỗi server khi xóa"});
+    res.status(500).json({ error: "Lỗi server khi xóa" });
   }
 });
 
@@ -353,18 +477,18 @@ app.post(
 
     try {
       const [menuResult] = await conn.query<ResultSetHeader>(
-  `INSERT INTO menu (name, description, image_url, category_id, status) 
+        `INSERT INTO menu (name, description, image_url, category_id, status) 
    VALUES (?, ?, ?, ?, ?)`,
-  [
-    name,
-    description || null,
-    image_url,
-    category_id,
-    status === "on" ? 1 : 0,
-  ]
-);
+        [
+          name,
+          description || null,
+          image_url,
+          category_id,
+          status === "on" ? 1 : 0,
+        ]
+      );
 
-const menuId = menuResult.insertId;
+      const menuId = menuResult.insertId;
 
       const sizes = [
         { size: "Small", price: parseFloat(price_small) },
@@ -767,13 +891,13 @@ app.get("/api/user/:id", async (req: Request, res: Response) => {
     const user = userRows[0] as { id: number; username: string; email: string; role: string };
 
     const [billing] = await db.query<RowDataPacket[]>(
-        `SELECT bd.phone, bd.address, bd.ward, bd.district, bd.city
+      `SELECT bd.phone, bd.address, bd.ward, bd.district, bd.city
         FROM orders o
         INNER JOIN billing_details bd ON o.order_id = bd.order_id
         WHERE o.id = ?
         ORDER BY o.created_at DESC   -- Sửa từ order_date → created_at
         LIMIT 1`,
-        [userId]
+      [userId]
     );
 
     let phone: string | null = null;
@@ -838,7 +962,7 @@ app.post("/api/admin/user/add", upload.none(), async (req: Request, res: Respons
   } catch (error) {
     await conn.rollback();
     console.error("Lỗi thêm nhân sự:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Không thể thêm nhân sự",
     });
   } finally {
@@ -848,8 +972,8 @@ app.post("/api/admin/user/add", upload.none(), async (req: Request, res: Respons
 
 app.put("/api/admin/user/:id", upload.none(), async (req: Request, res: Response) => {
   const userId = Number(req.params.id);
-  if (isNaN(userId)) return res.status(400).json({error: "ID không hợp lệ"});
-  const {role} = req.body as { role?: string };
+  if (isNaN(userId)) return res.status(400).json({ error: "ID không hợp lệ" });
+  const { role } = req.body as { role?: string };
 
   const updates: string[] = [];
   const values: (string | number | null)[] = [];
@@ -860,33 +984,33 @@ app.put("/api/admin/user/:id", upload.none(), async (req: Request, res: Response
   }
 
   if (updates.length === 0) {
-    return res.status(400).json({ error: "Không có dữ liệu để cập nhật"});
+    return res.status(400).json({ error: "Không có dữ liệu để cập nhật" });
   }
 
   values.push(userId);
 
   try {
     await db.query(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`, values);
-    res.json({ message: "Cập nhật nhân sự thành công!"});
+    res.json({ message: "Cập nhật nhân sự thành công!" });
   } catch (error) {
     console.error("Lỗi cập nhật: ", error);
-    res.status(500).json({error: "Không thể cập nhật"});
+    res.status(500).json({ error: "Không thể cập nhật" });
   }
 });
 
 app.delete("/api/admin/user/:id", async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  if (!id || id <=0) return res.status(400).json({error: "ID không hợp lệ"});
+  if (!id || id <= 0) return res.status(400).json({ error: "ID không hợp lệ" });
 
   try {
     const [result] = await db.query<ResultSetHeader>("DELETE FROM users WHERE id = ?", [id]);
     if (result.affectedRows === 0) {
-      return res.status(400).json({error: "Không tìm thấy nhân sự"});
+      return res.status(400).json({ error: "Không tìm thấy nhân sự" });
     }
-    res.json({message: "Xóa nhân sự thành công!"});
+    res.json({ message: "Xóa nhân sự thành công!" });
   } catch (error) {
     console.error("Lỗi xóa nhân sự: ", error);
-    res.status(500).json({error: "Lỗi server khi xóa"});
+    res.status(500).json({ error: "Lỗi server khi xóa" });
   }
 });
 
@@ -1029,6 +1153,320 @@ app.delete("/api/cart/item/:cart_item_id", authenticateToken, async (req: AuthRe
   } catch (error) {
     console.error("Lỗi xóa món:", error);
     res.status(500).json({ error: "Lỗi server" });
+  }
+});
+
+app.post("/api/orders/checkout", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const { billing, paymentMethod = "cash", voucherCode } = req.body as CheckoutPayload;
+
+  if (
+    !billing ||
+    !billing.fullName?.trim() ||
+    !billing.phone?.trim() ||
+    !billing.address?.trim() ||
+    !billing.provinceName?.trim()
+  ) {
+    return res.status(400).json({ message: "Thiếu thông tin giao hàng bắt buộc" });
+  }
+
+  const conn = await db.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    const { cartId, items, subtotal } = await fetchCartDetails(conn, userId);
+
+    if (!cartId || items.length === 0) {
+      await conn.rollback();
+      return res.status(400).json({ message: "Giỏ hàng trống" });
+    }
+
+    const deliveryFee = 0;
+    let discountAmount = 0;
+    let voucherId: number | null = null;
+
+    if (voucherCode && voucherCode.trim() !== "") {
+      const voucher = await fetchVoucher(conn, voucherCode, true);
+
+      if (!voucher || !validateVoucherActive(voucher)) {
+        await conn.rollback();
+        return res.status(400).json({ message: "Voucher không hợp lệ hoặc đã hết hạn" });
+      }
+
+      discountAmount = calculateDiscountAmount(voucher, subtotal);
+      discountAmount = Math.min(discountAmount, subtotal);
+      voucherId = voucher.voucher_id;
+
+      await conn.query(
+        "UPDATE voucher SET quantity = quantity - 1 WHERE voucher_id = ?",
+        [voucherId]
+      );
+    }
+
+    const total = subtotal + deliveryFee - discountAmount;
+
+    const [orderResult] = await conn.query<ResultSetHeader>(
+      `INSERT INTO orders
+        (id, voucher_id, subtotal, delivery_fee, discount, total, payment_method, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        voucherId,
+        Number(subtotal.toFixed(2)),
+        deliveryFee,
+        Number(discountAmount.toFixed(2)),
+        Number(total.toFixed(2)),
+        paymentMethod,
+        "pending",
+      ]
+    );
+
+    const orderId = orderResult.insertId;
+
+    const orderItemsValues = items.map((item) => [
+      orderId,
+      item.menu_id,
+      item.size,
+      item.quantity,
+      item.price,
+    ]);
+
+    await conn.query(
+      "INSERT INTO order_items (order_id, menu_id, size, quantity, price) VALUES ?",
+      [orderItemsValues]
+    );
+
+    await conn.query(
+      `INSERT INTO billing_details
+        (order_id, fullname, address, ward, district, city, phone)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        orderId,
+        billing.fullName.trim(),
+        billing.address.trim(),
+        billing.wardName ?? null,
+        billing.districtName ?? null,
+        billing.provinceName ?? null,
+        billing.phone.trim(),
+      ]
+    );
+
+    await conn.query("DELETE FROM cart_items WHERE cart_id = ?", [cartId]);
+
+    await conn.commit();
+
+    res.json({
+      message: "Đặt hàng thành công!",
+      order_id: orderId,
+    });
+  } catch (error) {
+    await conn.rollback();
+    console.error("Lỗi khi tạo đơn hàng:", error);
+    res.status(500).json({ message: "Không thể tạo đơn hàng" });
+  } finally {
+    conn.release();
+  }
+});
+
+app.post("/api/voucher/apply", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const { voucherCode } = req.body as { voucherCode?: string };
+
+  if (!voucherCode || voucherCode.trim() === "") {
+    return res.status(400).json({ message: "Vui lòng nhập mã voucher" });
+  }
+
+  const conn = await db.getConnection();
+
+  try {
+    const { cartId, items, subtotal } = await fetchCartDetails(conn, userId);
+
+    if (!cartId || items.length === 0) {
+      return res.status(400).json({ message: "Giỏ hàng trống" });
+    }
+
+    const voucher = await fetchVoucher(conn, voucherCode, false);
+
+    if (!voucher || !validateVoucherActive(voucher)) {
+      return res.status(400).json({ message: "Voucher không hợp lệ hoặc đã hết hạn" });
+    }
+
+    const discountAmount = Math.min(
+      calculateDiscountAmount(voucher, subtotal),
+      subtotal
+    );
+    const deliveryFee = 0;
+    const total = subtotal + deliveryFee - discountAmount;
+
+    res.json({
+      message: "Áp dụng voucher thành công",
+      voucher_id: voucher.voucher_id,
+      discount: Number(discountAmount.toFixed(2)),
+      subtotal: Number(subtotal.toFixed(2)),
+      delivery_fee: deliveryFee,
+      total: Number(total.toFixed(2)),
+    });
+  } catch (error) {
+    console.error("Lỗi áp dụng voucher:", error);
+    res.status(500).json({ message: "Không thể áp dụng voucher" });
+  } finally {
+    conn.release();
+  }
+});
+
+app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+
+  try {
+    const [orders] = await db.query<OrderDetailRow[]>(
+      `SELECT o.order_id,
+              o.total,
+              o.payment_method,
+              o.status,
+              o.created_at,
+              o.delivery_fee,
+              o.discount,
+              o.voucher_id,
+              v.title as voucher_code,
+              bd.fullname,
+              bd.phone,
+      CONCAT(
+        IFNULL(bd.address, ''),
+        IF(bd.ward IS NOT NULL AND bd.ward != '', CONCAT(', ', bd.ward), ''),
+        IF(bd.district IS NOT NULL AND bd.district != '', CONCAT(', ', bd.district), ''),
+        IF(bd.city IS NOT NULL AND bd.city != '', CONCAT(', ', bd.city), '')
+      ) as full_address
+      FROM orders o
+      LEFT JOIN billing_details bd ON o.order_id = bd.order_id
+      LEFT JOIN voucher v ON o.voucher_id = v.voucher_id
+      WHERE o.id = ?
+      ORDER BY o.created_at DESC`,
+      [userId]
+    );
+
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order) => {
+        const [items] = await db.query<RowDataPacket[]>(
+          `SELECT oi.quantity,
+                  oi.size,
+                  oi.price,
+                  m.name,
+                  m.image_url
+          FROM order_items oi
+          JOIN menu m ON oi.menu_id = m.menu_id
+          WHERE oi.order_id = ?
+          `,
+          [order.order_id]
+        );
+
+        return {
+          ...order,
+          items: items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price * item.quantity,
+            size: item.size,
+            image_url: item.image_url || "/images/placeholder.jpg"
+          }))
+        };
+      })
+    );
+    res.json(ordersWithItems);
+  } catch {
+    console.error("Lỗi lấy đơn hàng người dùng:", error);
+    res.status(500).json({message: "Lỗi server"});
+  }
+});
+
+app.get("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const orderId = Number(req.params.id);
+
+  if (isNaN(orderId))
+    return res.status(400).json({message: "ID không hợp lệ"});
+
+  try {
+    const [orders] = await db.query<OrderDetailRow[]>(
+      `SELECT * FROM orders o
+      LEFT JOIN billing_details bd ON o.order_id = bd.order_id
+      WHERE o.order_id = ? AND O.id = ?`,
+      [orderId, userId]
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({message: "Không tìm thấy đơn hàng"});
+    }
+
+    const order = orders[0];
+    const [items] = await db.query<RowDataPacket[]> (
+        `SELECT oi.*,
+                m.name,
+                m.image_url
+          FROM order_items oi
+          JOIN menu m ON oi.menu_id = m.menu_id
+          WHERE oi.order_id = ?`,
+          [orderId]
+    );
+    res.json({...order, items});
+  } catch (error) {
+    console.error("Lỗi lấy chi tiêt đơn:", error);
+    res.status(500).json({message: "Lỗi server"});
+  }
+});
+
+app.post("/api/orders/:id/cancel", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const orderId = Number(req.params.id);
+
+  if (isNaN(orderId) || orderId <= 0) {
+    return res.status(400).json({ message: "ID đơn hàng không hợp lệ" });
+  }
+
+  const conn = await db.getConnection();
+  await conn.beginTransaction();
+
+  try {
+    const [orders] = await conn.query<RowDataPacket[]>(
+      "SELECT status, voucher_id FROM orders WHERE order_id = ? AND id = ?",
+      [orderId, userId]
+    );
+
+    if (orders.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    const currentStatus = orders[0].status;
+    const voucherId = orders[0].voucher_id;
+
+    if (currentStatus !== "pending") {
+      await conn.rollback();
+      return res.status(400).json({ 
+        message: "Chỉ có thể hủy đơn hàng khi đang ở trạng thái Chờ xác nhận" 
+      });
+    }
+
+    await conn.query(
+      "UPDATE orders SET status = 'canceled' WHERE order_id = ?",
+      [orderId]
+    );
+
+    if (voucherId) {
+      await conn.query(
+        "UPDATE voucher SET quantity = quantity + 1 WHERE voucher_id = ? AND quantity < 9999",
+        [voucherId]
+      );
+    }
+
+    await conn.commit();
+    res.json({ message: "Đã hủy đơn hàng thành công!" });
+  } catch (error) {
+    await conn.rollback();
+    console.error("Lỗi hủy đơn hàng:", error);
+    res.status(500).json({ message: "Lỗi server khi hủy đơn hàng" });
+  } finally {
+    conn.release();
   }
 });
 

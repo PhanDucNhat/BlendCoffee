@@ -142,9 +142,7 @@ const Cart: React.FC = () => {
             </button>
 
             <img
-              src={
-                item.image_url ? `/${item.image_url}` : "/images/default.jpg"
-              }
+              src={item.image_url ? `${item.image_url}` : "/images/default.jpg"}
               alt={item.name}
               className="w-20 h-20 rounded-lg object-cover"
             />
