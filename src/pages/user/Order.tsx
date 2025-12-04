@@ -39,70 +39,6 @@ interface Order {
   items: OrderItem[];
 }
 
-// const orders: Order[] = [
-//   {
-//     id: "DH2025041",
-//     date: "15/04/2025",
-//     time: "14:30",
-//     payment: "COD",
-//     total: 2250000,
-//     status: "delivered",
-//     items: [
-//       { name: "Tai nghe Gaming RGB Pro X", quantity: 1, price: 850000 },
-//       { name: "Chuột Logitech G502 Hero", quantity: 2, price: 700000 },
-//     ],
-//     shipping: {
-//       name: "Nguyễn Văn An",
-//       phone: "0901234567",
-//       address: "123 Đường Láng, Đống Đa, Hà Nội",
-//       deliveredAt: "17/04/2025 10:25",
-//     },
-//     price: { subtotal: 2250000, shipping: 35000, discount: 0, final: 2285000 },
-//   },
-//   {
-//     id: "DH2025038",
-//     date: "12/04/2025",
-//     time: "21:10",
-//     payment: "Chuyển khoản",
-//     total: 1890000,
-//     status: "shipped",
-//     items: [
-//       { name: "Bàn phím cơ Keychron K8 Pro", quantity: 1, price: 1890000 },
-//     ],
-//     shipping: {
-//       name: "Trần Thị Mai",
-//       phone: "0987654321",
-//       address: "56 Nguyễn Trãi, Thanh Xuân, Hà Nội",
-//       deliveredAt: null,
-//     },
-//     price: { subtotal: 1890000, shipping: 0, discount: 100000, final: 1790000 },
-//   },
-//   {
-//     id: "DH2025037",
-//     date: "12/04/2025",
-//     time: "09:45",
-//     payment: "Momo",
-//     total: 5880000,
-//     status: "processing",
-//     items: [
-//       { name: 'Màn hình LG UltraGear 27" 144Hz', quantity: 1, price: 5490000 },
-//       { name: "Giá đỡ màn hình North Bayou", quantity: 1, price: 390000 },
-//     ],
-//     shipping: {
-//       name: "Lê Văn Hùng",
-//       phone: "0912345678",
-//       address: "89 Lê Lợi, Quận 1, TP.HCM",
-//       deliveredAt: null,
-//     },
-//     price: {
-//       subtotal: 5880000,
-//       shipping: 45000,
-//       discount: 200000,
-//       final: 5925000,
-//     },
-//   },
-// ];
-
 const statusInfo = {
   completed: { label: "Đã giao", icon: CheckCircle2, color: "text-green-400" },
   processing: { label: "Đang giao", icon: Truck, color: "text-orange-400" },
@@ -326,13 +262,13 @@ export default function OrderPage() {
                                   <div>
                                     <p className="text-sm">{item.name}</p>
                                     {item.size && (
-                                      <p className="text-xs text-white flex">
-                                        Size:{" "}
+                                      <div className="text-xs text-white flex">
+                                        Size:
                                         <p className="text-gray-400 px-2">
                                           {item.size}
-                                        </p>{" "}
+                                        </p>
                                         x{item.quantity}
-                                      </p>
+                                      </div>
                                     )}
                                   </div>
                                 </div>
@@ -406,12 +342,6 @@ export default function OrderPage() {
                   <div className="flex gap-3 text-white">
                     <MapPin className="w-4 h-4" /> {detailOrder.full_address}
                   </div>
-                  {/* {detailOrder.shipping.deliveredAt && (
-                    <div className="flex gap-3 text-green-400">
-                      <CalendarCheck className="w-4 h-4" /> Đã giao:{" "}
-                      {detailOrder.shipping.deliveredAt}
-                    </div>
-                  )} */}
                 </div>
               </div>
               <div>

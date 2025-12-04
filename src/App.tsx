@@ -35,6 +35,7 @@ import {
   AdminBlog,
   AdminUser,
   AdminVoucher,
+  AdminOrder,
 } from "./admin";
 import React from "react";
 
@@ -85,6 +86,7 @@ const AppContent: React.FC = () => {
           <Route path="blog" element={<AdminBlog />} />
           <Route path="user" element={<AdminUser />} />
           <Route path="voucher" element={<AdminVoucher />} />
+          <Route path="order" element={<AdminOrder />} />
         </Route>
       </Routes>
 

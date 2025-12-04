@@ -51,6 +51,13 @@ export default function AdminSidebar() {
           <i className="fa-solid fa-ticket mr-3 w-5"></i>
           Quản lý voucher
         </Link>
+        <Link
+          to="/admin/order"
+          className="flex items-center hover:bg-gray-700 p-2 rounded transition"
+        >
+          <i className="fa-solid fa-clipboard-list mr-3 w-5"></i>
+          Quản lý đơn hàng
+        </Link>
       </nav>
       <div className="p-4 space-y-3 overflow-y-auto text-red-500">
         <Link

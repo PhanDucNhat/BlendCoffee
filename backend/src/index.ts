@@ -83,18 +83,30 @@ interface OrderDetailRow extends RowDataPacket {
   payment_method: "cash" | "bank_transfer";
   status: "pending" | "processing" | "completed" | "canceled";
   created_at: Date;
-  delivery_fee: number | null;
-  discount: number | null;
+  delivery_fee: number;
+  discount: number;
   voucher_id: number | null;
-  fullname: string | null;
-  phone: string | null;
+  fullname: string;
+  phone: string;
   note: string | null;
-  full_address: string | null;
-  menu_name: string | null;
-  image_url: string | null;
-  size: "Small" | "Medium" | "Large" | null;
-  quantity: number | null;
-  item_price: number | null;
+  full_address: string;
+  menu_name: string;
+  image_url: string;
+  size: "Small" | "Medium" | "Large";
+  quantity: number;
+  item_price: number;
+}
+
+interface AddressItem extends RowDataPacket {
+  address_id: number;
+  id: number;
+  fullname: string;
+  phone: string;
+  detail_address: string;
+  ward: string;
+  district: string;
+  city: string;
+  is_default: 1 | 0;
 }
 
 const fetchCartDetails = async (conn: PoolConnection, userId: number) => {
@@ -1428,7 +1440,7 @@ app.post("/api/orders/:id/cancel", authenticateToken, async (req: AuthRequest, r
 
   try {
     const [orders] = await conn.query<RowDataPacket[]>(
-      "SELECT status, voucher_id FROM orders WHERE order_id = ? AND id = ?",
+      `SELECT status, voucher_id FROM orders WHERE order_id = ? AND id = ?`,
       [orderId, userId]
     );
 
@@ -1448,13 +1460,13 @@ app.post("/api/orders/:id/cancel", authenticateToken, async (req: AuthRequest, r
     }
 
     await conn.query(
-      "UPDATE orders SET status = 'canceled' WHERE order_id = ?",
+      `UPDATE orders SET status = 'canceled' WHERE order_id = ?`,
       [orderId]
     );
 
     if (voucherId) {
       await conn.query(
-        "UPDATE voucher SET quantity = quantity + 1 WHERE voucher_id = ? AND quantity < 9999",
+        `UPDATE voucher SET quantity = quantity + 1 WHERE voucher_id = ? AND quantity < 9999`,
         [voucherId]
       );
     }
@@ -1467,6 +1479,221 @@ app.post("/api/orders/:id/cancel", authenticateToken, async (req: AuthRequest, r
     res.status(500).json({ message: "Lỗi server khi hủy đơn hàng" });
   } finally {
     conn.release();
+  }
+});
+
+app.post("/api/change-password", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const {oldPassword, newPassWord} = req.body;
+
+  if (!oldPassword || !newPassWord) {
+    return res.status(400).json({mesage: "Vui lòng nhập đầy đủ mật khẩu cũ và mới"});
+  }
+
+  if (newPassWord.length < 6) {
+    return res.status(400).json({mesage: "Mật khẩu mới phải có ít nhất 6 ký tự"});
+  }
+
+  try {
+    const [users] = await db.query<User[]>(
+      `SELECT * FROM users WHERE id = ?`,
+      [userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({message: "Không tìm thấy người dùng"});
+    }
+
+    const user = users[0];
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({message: "Mật khẩu cũ không đúng"});
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassWord, 10);
+
+    await db.query(
+      `UPDATE users SET password = ? WHERE id = ?`,
+      [hashedNewPassword, userId]
+    );
+    res.json({message: "Đổi mật khẩu thành công"});
+  } catch (error) {
+    console.error("Lỗi đổi mật khẩu:", error);
+    res.status(500).json({message: "Lỗi server"});
+  }
+});
+
+app.get("/api/addresses", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+
+  try {
+    const [rows] = await db.query<AddressItem[]>(
+      `SELECT 
+        address_id, fullname, phone, detail_address, 
+        ward, district, city, is_default
+       FROM addresses 
+       WHERE id = ?
+       ORDER BY is_default DESC, address_id DESC`,
+      [userId]
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Lỗi lấy danh sách địa chỉ:", error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+app.post("/api/addresses/add", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const {
+    fullname,
+    phone,
+    detail_address,
+    ward,
+    district,
+    city,
+    is_default = 0,
+  } = req.body;
+
+  if (!fullname || !phone || !detail_address || !ward || !district || !city) {
+    return res.status(400).json({ message: "Vui lòng điền đầy đủ thông tin địa chỉ" });
+  }
+
+  const conn = await db.getConnection();
+  await conn.beginTransaction();
+
+  try {
+    if (is_default === 1 || is_default === true) {
+      await conn.query(`UPDATE addresses SET is_default = 0 WHERE id = ?`, [userId]);
+    }
+
+    const [result] = await conn.query<ResultSetHeader>(
+      `INSERT INTO addresses 
+       (id, fullname, phone, detail_address, ward, district, city, is_default)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        fullname.trim(),
+        phone.trim(),
+        detail_address.trim(),
+        ward.trim(),
+        district.trim(),
+        city.trim(),
+        is_default ? 1 : 0,
+      ]
+    );
+
+    await conn.commit();
+    res.status(201).json({
+      message: "Thêm địa chỉ thành công",
+      address_id: result.insertId,
+    });
+  } catch (error) {
+    await conn.rollback();
+    console.error("Lỗi thêm địa chỉ:", error);
+    res.status(500).json({ message: "Không thể thêm địa chỉ" });
+  } finally {
+    conn.release();
+  }
+});
+
+app.put("/api/addresses/update/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const addressId = Number(req.params.id);
+
+  if (isNaN(addressId) || addressId <= 0) {
+    return res.status(400).json({ message: "ID địa chỉ không hợp lệ" });
+  }
+
+  const {
+    fullname,
+    phone,
+    detail_address,
+    ward,
+    district,
+    city,
+    is_default,
+  } = req.body;
+
+  if (!fullname || !phone || !detail_address || !ward || !district || !city) {
+    return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+  }
+
+  const conn = await db.getConnection();
+  await conn.beginTransaction();
+
+  try {
+    const [existing] = await conn.query<RowDataPacket[]>(
+      "SELECT 1 FROM addresses WHERE address_id = ? AND id = ?",
+      [addressId, userId]
+    );
+
+    if (existing.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ message: "Không tìm thấy địa chỉ hoặc bạn không có quyền" });
+    }
+
+    if (is_default === 1 || is_default === true) {
+      await conn.query(`UPDATE addresses SET is_default = 0 WHERE id = ?`, [userId]);
+    }
+
+    await conn.query(
+      `UPDATE addresses SET
+        fullname = ?,
+        phone = ?,
+        detail_address = ?,
+        ward = ?,
+        district = ?,
+        city = ?,
+        is_default = ?
+       WHERE address_id = ? AND id = ?`,
+      [
+        fullname.trim(),
+        phone.trim(),
+        detail_address.trim(),
+        ward.trim(),
+        district.trim(),
+        city.trim(),
+        is_default ? 1 : 0,
+        addressId,
+        userId,
+      ]
+    );
+
+    await conn.commit();
+    res.json({ message: "Cập nhật địa chỉ thành công" });
+  } catch (error) {
+    await conn.rollback();
+    console.error("Lỗi cập nhật địa chỉ:", error);
+    res.status(500).json({ message: "Không thể cập nhật địa chỉ" });
+  } finally {
+    conn.release();
+  }
+});
+
+app.delete("/api/addresses/delete/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const addressId = Number(req.params.id);
+
+  if (isNaN(addressId) || addressId <= 0) {
+    return res.status(400).json({ message: "ID không hợp lệ" });
+  }
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM addresses WHERE address_id = ? AND id = ?",
+      [addressId, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Không tìm thấy địa chỉ hoặc bạn không có quyền xóa" });
+    }
+
+    res.json({ message: "Xóa địa chỉ thành công" });
+  } catch (error) {
+    console.error("Lỗi xóa địa chỉ:", error);
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 

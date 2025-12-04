@@ -104,16 +104,12 @@ const Profile: React.FC = () => {
               </h2>
               <div className="text-2xl flex justify-center">
                 <span className="text-gray-400 mr-1">HELLO </span>
-                <p className="font-medium text-[#b6894b]">
-                  {user.username.toUpperCase()}
+                <p className="font-medium text-[#b6894b] uppercase">
+                  {user.username}
                 </p>
               </div>
               <div className="w-[200px] h-[200px] mx-auto">
-                <img
-                  src="/images/avatar.png"
-                  alt="avatar"
-                  className="w-full h-full object-cover rounded-full border-4 border-cyan-500"
-                />
+                <img src="/images/avatar.png" alt="avatar" />
               </div>
             </div>
 

@@ -5,3 +5,4 @@ export { default as AdminMenu } from "./pages/AdminMenu";
 export { default as AdminBlog } from "./pages/AdminBlog";
 export { default as AdminUser } from "./pages/AdminUser";
 export { default as AdminVoucher } from "./pages/AdminVoucher";
+export { default as AdminOrder } from "./pages/AdminOrder";

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ShoppingCart, User } from "lucide-react";
+import { ShoppingCart, User, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 interface NavItem {
@@ -120,7 +120,6 @@ const Navbar: React.FC = () => {
               >
                 <Link to={item.link} className="px-1 py-2 inline-block">
                   {item.name}
-                  {/* {hasSub && <span className="ml-1">▾</span>} */}
                 </Link>
 
                 {hasSub && (
@@ -212,10 +211,11 @@ const Navbar: React.FC = () => {
                       Sổ địa chỉ
                     </Link>
                   </li>
-                  <li>
+                  <li className="flex text-red-500">
+                    <LogOut className="inline-block w-5 h-5 my-2 ml-2" />
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-3 py-2 text-sm text-gray-200 hover:text-red-400 hover:bg-[#2a2c2e] transition duration-200"
+                      className="block w-full text-left p-2 text-sm hover:text-red-400 hover:bg-[#2a2c2e] transition duration-200"
                     >
                       Đăng xuất
                     </button>
