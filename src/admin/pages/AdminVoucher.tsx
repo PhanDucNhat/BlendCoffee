@@ -39,6 +39,9 @@ export default function AdminVoucher() {
   const [deletingItem, setDeletingItem] = useState<voucherItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [localStatuses, setLocalStatuses] = useState<{
+    [key: number]: boolean;
+  }>({});
 
   const itemsPerPage = 10;
 
@@ -56,6 +59,11 @@ export default function AdminVoucher() {
       const data = (await res.json()) as voucherItem[];
       setVouchers(data);
       setFilteredVouchers(data);
+      const initialStatuses: { [key: number]: boolean } = {};
+      data.forEach((voucher) => {
+        initialStatuses[voucher.voucher_id] = voucher.status === 1;
+      });
+      setLocalStatuses(initialStatuses);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Lỗi kết nối server";
@@ -88,6 +96,35 @@ export default function AdminVoucher() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  const handleToggleStatus = async (voucherId: number) => {
+    const currentStatus = localStatuses[voucherId];
+    const newStatus = !currentStatus;
+    setLocalStatuses((prev) => ({ ...prev, [voucherId]: newStatus }));
+
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/admin/voucher/${voucherId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus ? "1" : "0" }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Cập nhật trạng thái thất bại");
+      }
+      setVouchers((prev) =>
+        prev.map((v) =>
+          v.voucher_id === voucherId ? { ...v, status: newStatus ? 1 : 0 } : v
+        )
+      );
+    } catch (err) {
+      setLocalStatuses((prev) => ({ ...prev, [voucherId]: currentStatus }));
+      alert(err instanceof Error ? err.message : "Lỗi cập nhật trạng thái");
+    }
+  };
 
   const toggleSelectAll = () => {
     if (
@@ -510,18 +547,19 @@ export default function AdminVoucher() {
                     - {voucher.discount_value}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center gap-1 text-xs font-medium ${
-                        voucher.status ? "text-green-700" : "text-red-700"
-                      }`}
-                    >
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          voucher.status ? "bg-green-500" : "bg-red-500"
-                        }`}
+                    <div className="relative inline-block w-11 h-5">
+                      <input
+                        checked={localStatuses[voucher.voucher_id] || false}
+                        id={`switch-${voucher.voucher_id}`}
+                        type="checkbox"
+                        onChange={() => handleToggleStatus(voucher.voucher_id)}
+                        className="peer appearance-none w-11 h-5 bg-slate-100 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
                       />
-                      {voucher.status ? "Active" : "Inactive"}
-                    </span>
+                      <label
+                        htmlFor={`switch-${voucher.voucher_id}`}
+                        className="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-slate-800 cursor-pointer"
+                      ></label>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right space-x-1">
                     <button

@@ -3,6 +3,7 @@ import {
   Routes,
   Route,
   useLocation,
+  Navigate,
 } from "react-router-dom";
 // import "./App.css";
 import Navbar from "./components/Navbar/Navbar";
@@ -30,14 +31,42 @@ import Address from "./pages/user/Addresses";
 import {
   AdminLayout,
   Dashboard,
-  AdminLogin,
   AdminMenu,
   AdminBlog,
   AdminUser,
   AdminVoucher,
   AdminOrder,
+  PrintOrder,
 } from "./admin";
 import React from "react";
+
+interface LoggedInUser {
+  id: number;
+  username: string;
+  role: string;
+}
+
+const AdminRoute: React.FC<{ children: React.ReactElement }> = ({
+  children,
+}) => {
+  const location = useLocation();
+  const storedUser = localStorage.getItem("user");
+
+  if (!storedUser) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  try {
+    const user: LoggedInUser = JSON.parse(storedUser);
+    if (user.role !== "admin") {
+      return <Navigate to="/" replace />;
+    }
+  } catch {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
 
 const AppContent: React.FC = () => {
   const location = useLocation();
@@ -79,14 +108,21 @@ const AppContent: React.FC = () => {
         {/* <Route path="/singleproduct" element={<SingleProduct />} /> */}
         <Route path="/singleproduct/:id" element={<SingleProduct />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="adminmenu" element={<AdminMenu />} />
           <Route path="blog" element={<AdminBlog />} />
           <Route path="user" element={<AdminUser />} />
           <Route path="voucher" element={<AdminVoucher />} />
           <Route path="order" element={<AdminOrder />} />
+          <Route path="order/print/:orderId" element={<PrintOrder />} />
         </Route>
       </Routes>
 

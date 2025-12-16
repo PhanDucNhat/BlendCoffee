@@ -97,6 +97,34 @@ interface OrderDetailRow extends RowDataPacket {
   item_price: number;
 }
 
+interface AdminOrderRow extends RowDataPacket {
+  order_id: number;
+  user_id: number;
+  username: string | null;
+  email: string | null;
+  subtotal: number;
+  delivery_fee: number | null;
+  discount: number | null;
+  total: number;
+  payment_method: "cash" | "bank_transfer";
+  status: "pending" | "processing" | "completed" | "canceled" | "cancel";
+  created_at: Date;
+  voucher_code: string | null;
+  fullname: string | null;
+  phone: string | null;
+  full_address: string | null;
+}
+
+interface AdminOrderItemRow extends RowDataPacket {
+  order_id: number;
+  menu_id: number;
+  name: string;
+  image_url: string | null;
+  size: "Small" | "Medium" | "Large";
+  quantity: number;
+  price: number;
+}
+
 interface AddressItem extends RowDataPacket {
   address_id: number;
   id: number;
@@ -566,70 +594,73 @@ app.get("/api/menu/:id", async (req: Request, res: Response) => {
   }
 });
 
-app.put(
-  "/api/admin/menu/:id",
-  upload.single("image"),
-  async (req: Request, res: Response) => {
-    const menuId = Number(req.params.id);
-    if (isNaN(menuId)) {
-      return res.status(400).json({ error: "ID không hợp lệ" });
+app.put("/api/admin/menu/:id", upload.single("image"), async (req: Request, res: Response) => {
+  const menuId = Number(req.params.id);
+  if (isNaN(menuId)) {
+    return res.status(400).json({ error: "ID không hợp lệ" });
+  }
+
+  const {
+    name,
+    description,
+    category_id,
+    price_small,
+    price_medium,
+    price_large,
+    status,
+  } = req.body;
+
+  const image_url = req.file ? `/images/${req.file.filename}` : null;
+
+  const conn = await db.getConnection();
+  await conn.beginTransaction();
+
+  try {
+    const updateFields: string[] = [];
+    const updateValues: (string | number | null)[] = [];
+
+    if (name !== undefined) {
+      updateFields.push("name = ?");
+      updateValues.push(name);
+    }
+    if (description !== undefined) {
+      updateFields.push("description = ?");
+      updateValues.push(description || null);
+    }
+    if (category_id !== undefined) {
+      updateFields.push("category_id = ?");
+      updateValues.push(Number(category_id));
+    }
+    if (image_url !== null) {
+      updateFields.push("image_url = ?");
+      updateValues.push(image_url);
+    }
+    if (status !== undefined) {
+      const statusVal = status === "on" || status === "1" || status === "true" ? 1 : 0;
+      updateFields.push("status = ?");
+      updateValues.push(statusVal);
     }
 
-    const {
-      name,
-      description,
-      category_id,
-      price_small,
-      price_medium,
-      price_large,
-      status,
-    } = req.body;
-    const image_url = req.file ? `/images/${req.file.filename}` : null;
+    if (updateFields.length > 0) {
+      updateValues.push(menuId);
+      await conn.query(
+        `UPDATE menu SET ${updateFields.join(", ")} WHERE menu_id = ?`,
+        updateValues
+      );
+    }
+    const hasPriceData =
+      price_small !== undefined ||
+      price_medium !== undefined ||
+      price_large !== undefined;
 
-    const conn = await db.getConnection();
-    await conn.beginTransaction();
-
-    try {
-      const updateFields: string[] = [];
-      const updateValues: (string | number | null)[] = [];
-
-      if (name) {
-        updateFields.push("name = ?");
-        updateValues.push(name);
-      }
-      if (description !== undefined) {
-        updateFields.push("description = ?");
-        updateValues.push(description || null);
-      }
-      if (category_id) {
-        updateFields.push("category_id = ?");
-        updateValues.push(Number(category_id));
-      }
-      if (image_url) {
-        updateFields.push("image_url = ?");
-        updateValues.push(image_url);
-      }
-      if (status !== undefined) {
-        const statusVal = status === "1" ? 1 : 0;
-        updateFields.push("status = ?");
-        updateValues.push(statusVal);
-      }
-
-      if (updateFields.length > 0) {
-        updateValues.push(menuId);
-        await conn.query(
-          `UPDATE menu SET ${updateFields.join(", ")} WHERE menu_id = ?`,
-          updateValues
-        );
-      }
+    if (hasPriceData) {
+      await conn.query(`DELETE FROM menu_sizes WHERE menu_id = ?`, [menuId]);
 
       const sizes = [
         { size: "Small", price: parseFloat(price_small || "0") },
         { size: "Medium", price: parseFloat(price_medium || "0") },
         { size: "Large", price: parseFloat(price_large || "0") },
       ].filter((s) => !isNaN(s.price) && s.price > 0);
-
-      await conn.query(`DELETE FROM menu_sizes WHERE menu_id = ?`, [menuId]);
 
       if (sizes.length > 0) {
         const values = sizes.map((s) => [menuId, s.size, s.price]);
@@ -638,18 +669,39 @@ app.put(
           [values]
         );
       }
-
-      await conn.commit();
-      res.json({ message: "Cập nhật thành công!" });
-    } catch (error) {
-      await conn.rollback();
-      console.error("Lỗi cập nhật món:", error);
-      res.status(500).json({ error: "Không thể cập nhật món" });
-    } finally {
-      conn.release();
     }
+    await conn.commit();
+    res.json({ message: "Cập nhật thành công!" });
+  } catch (error) {
+    await conn.rollback();
+    console.error("Lỗi cập nhật món:", error);
+    res.status(500).json({ error: "Không thể cập nhật món" });
+  } finally {
+    conn.release();
   }
-);
+});
+
+app.patch("/api/admin/menu/:id/status", async (req: Request, res: Response) => {
+  const menuId = Number(req.params.id);
+  const { status } = req.body;
+
+  if (isNaN(menuId) || (status !== 0 && status !== 1)) {
+    return res.status(400).json({ error: "Dữ liệu không hợp lệ" });
+  }
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      `UPDATE menu SET status = ? WHERE menu_id = ?`,
+      [status, menuId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Không tìm thấy món" });
+    }
+    res.json({ message: "Cập nhật trạng thái thành công" });
+  } catch (error) {
+    console.error("Lỗi đổi status:", error);
+    res.status(500).json({ error: "Lỗi server" });
+  }
+});
 
 app.patch("/api/admin/menu/bulk-status", async (req: Request, res: Response) => {
   const { ids, status } = req.body;
@@ -744,7 +796,6 @@ app.get("/api/admin/menu-sizes", async (req: Request, res: Response) => {
       FROM menu m
       LEFT JOIN menu_category c ON m.category_id = c.category_id
       LEFT JOIN menu_sizes s ON m.menu_id = s.menu_id
-      WHERE s.size IS NOT NULL
       ORDER BY m.menu_id, 
                FIELD(s.size, 'Small', 'Medium', 'Large')
     `);
@@ -1387,7 +1438,7 @@ app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response
     res.json(ordersWithItems);
   } catch {
     console.error("Lỗi lấy đơn hàng người dùng:", error);
-    res.status(500).json({message: "Lỗi server"});
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
@@ -1396,7 +1447,7 @@ app.get("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Resp
   const orderId = Number(req.params.id);
 
   if (isNaN(orderId))
-    return res.status(400).json({message: "ID không hợp lệ"});
+    return res.status(400).json({ message: "ID không hợp lệ" });
 
   try {
     const [orders] = await db.query<OrderDetailRow[]>(
@@ -1407,23 +1458,118 @@ app.get("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Resp
     );
 
     if (orders.length === 0) {
-      return res.status(404).json({message: "Không tìm thấy đơn hàng"});
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
 
     const order = orders[0];
-    const [items] = await db.query<RowDataPacket[]> (
-        `SELECT oi.*,
+    const [items] = await db.query<RowDataPacket[]>(
+      `SELECT oi.*,
                 m.name,
                 m.image_url
           FROM order_items oi
           JOIN menu m ON oi.menu_id = m.menu_id
           WHERE oi.order_id = ?`,
-          [orderId]
+      [orderId]
     );
-    res.json({...order, items});
+    res.json({ ...order, items });
   } catch (error) {
     console.error("Lỗi lấy chi tiêt đơn:", error);
-    res.status(500).json({message: "Lỗi server"});
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+app.get("/api/admin/orders", async (req: Request, res: Response) => {
+  try {
+    const [orders] = await db.query<AdminOrderRow[]>(
+      `SELECT 
+        o.order_id,
+        o.id AS user_id,
+        u.username,
+        u.email,
+        o.subtotal,
+        o.delivery_fee,
+        o.discount,
+        o.total,
+        o.payment_method,
+        o.status,
+        o.created_at,
+        v.title AS voucher_code,
+        bd.fullname,
+        bd.phone,
+        CONCAT(
+          IFNULL(bd.address, ''),
+          IF(bd.ward IS NOT NULL AND bd.ward != '', CONCAT(', ', bd.ward), ''),
+          IF(bd.district IS NOT NULL AND bd.district != '', CONCAT(', ', bd.district), ''),
+          IF(bd.city IS NOT NULL AND bd.city != '', CONCAT(', ', bd.city), '')
+        ) AS full_address
+      FROM orders o
+      LEFT JOIN users u ON o.id = u.id
+      LEFT JOIN billing_details bd ON o.order_id = bd.order_id
+      LEFT JOIN voucher v ON o.voucher_id = v.voucher_id
+      ORDER BY o.created_at DESC`
+    );
+
+    if (orders.length === 0) {
+      return res.json([]);
+    }
+
+    const orderIds = orders.map((order) => order.order_id);
+    const placeholders = orderIds.map(() => "?").join(", ");
+
+    const [items] = await db.query<AdminOrderItemRow[]>(
+      `SELECT 
+        oi.order_id,
+        oi.menu_id,
+        oi.size,
+        oi.quantity,
+        oi.price,
+        m.name,
+        m.image_url
+      FROM order_items oi
+      JOIN menu m ON oi.menu_id = m.menu_id
+      WHERE oi.order_id IN (${placeholders})
+      ORDER BY oi.order_id`,
+      orderIds
+    );
+
+    const itemsByOrder = new Map<number, AdminOrderItemRow[]>();
+
+    items.forEach((item) => {
+      if (!itemsByOrder.has(item.order_id)) {
+        itemsByOrder.set(item.order_id, []);
+      }
+      itemsByOrder.get(item.order_id)!.push(item);
+    });
+
+    const payload = orders.map((order) => {
+
+      const orderItems = (itemsByOrder.get(order.order_id) || []).map(
+        (item) => ({
+          menu_id: item.menu_id,
+          name: item.name,
+          image_url: item.image_url || "/images/placeholder.jpg",
+          size: item.size,
+          quantity: item.quantity,
+          price: Number(item.price),
+        })
+      );
+
+      return {
+        ...order,
+        status: order.status,
+        subtotal: Number(order.subtotal),
+        total: Number(order.total),
+        delivery_fee:
+          order.delivery_fee === null ? 0 : Number(order.delivery_fee),
+        discount: order.discount === null ? 0 : Number(order.discount),
+        items: orderItems,
+      };
+    });
+
+    res.json(payload);
+  } catch (error) {
+    console.error("Lỗi lấy danh sách đơn hàng admin:", error);
+    res.status(500).json({ message: "Không thể lấy danh sách đơn hàng" });
   }
 });
 
@@ -1454,8 +1600,8 @@ app.post("/api/orders/:id/cancel", authenticateToken, async (req: AuthRequest, r
 
     if (currentStatus !== "pending") {
       await conn.rollback();
-      return res.status(400).json({ 
-        message: "Chỉ có thể hủy đơn hàng khi đang ở trạng thái Chờ xác nhận" 
+      return res.status(400).json({
+        message: "Chỉ có thể hủy đơn hàng khi đang ở trạng thái Chờ xác nhận"
       });
     }
 
@@ -1482,16 +1628,218 @@ app.post("/api/orders/:id/cancel", authenticateToken, async (req: AuthRequest, r
   }
 });
 
+app.post("/api/admin/orders/add", async (req: Request, res: Response) => {
+  const {
+    adminId,
+    items,
+    fullname,
+    phone,
+    detail_address,
+    provinceName,
+    districtName,
+    wardName,
+    paymentMethod = "cash",
+    voucherCode,
+  } = req.body as {
+    adminId?: number;
+    items?: Array<{ menu_id: number; size: string; quantity: number }>;
+    fullname?: string;
+    phone?: string;
+    detail_address?: string;
+    provinceName?: string;
+    districtName?: string;
+    wardName?: string;
+    paymentMethod?: "cash" | "bank_transfer";
+    voucherCode?: string | null;
+  };
+
+  if (
+    !adminId ||
+    !Array.isArray(items) ||
+    items.length === 0 ||
+    !fullname?.trim() ||
+    !phone?.trim() ||
+    !detail_address?.trim() ||
+    !provinceName?.trim()
+  ) {
+    return res.status(400).json({ message: "Thiếu dữ liệu bắt buộc" });
+  }
+
+  const conn = await db.getConnection();
+  await conn.beginTransaction();
+
+  try {
+    let subtotal = 0;
+    const normalizedItems: Array<{
+      menu_id: number;
+      size: string;
+      quantity: number;
+      price: number;
+    }> = [];
+
+    for (const item of items) {
+      const menuId = Number(item.menu_id);
+      const size = String(item.size || "Medium");
+      const quantity = Number(item.quantity) || 0;
+
+      if (!menuId || quantity <= 0) {
+        await conn.rollback();
+        return res.status(400).json({ message: "Thông tin món không hợp lệ" });
+      }
+
+      const [priceRows] = await conn.query<RowDataPacket[]>(
+        "SELECT price FROM menu_sizes WHERE menu_id = ? AND size = ?",
+        [menuId, size]
+      );
+
+      if (priceRows.length === 0) {
+        await conn.rollback();
+        return res.status(400).json({ message: "Không tìm thấy giá cho món đã chọn" });
+      }
+
+      const price = Number((priceRows[0] as { price: number }).price);
+
+      subtotal += price * quantity;
+      normalizedItems.push({ menu_id: menuId, size, quantity, price });
+    }
+
+    let discountAmount = 0;
+    let voucherId: number | null = null;
+
+    if (voucherCode && voucherCode.trim() !== "") {
+      const voucher = await fetchVoucher(conn, voucherCode, true);
+
+      if (!voucher || !validateVoucherActive(voucher)) {
+        await conn.rollback();
+        return res.status(400).json({ message: "Voucher không hợp lệ hoặc đã hết hạn" });
+      }
+
+      discountAmount = Math.min(
+        calculateDiscountAmount(voucher, subtotal),
+        subtotal
+      );
+      voucherId = voucher.voucher_id;
+
+      await conn.query(
+        "UPDATE voucher SET quantity = quantity - 1 WHERE voucher_id = ?",
+        [voucherId]
+      );
+    }
+
+    const deliveryFee = 0;
+    const total = subtotal + deliveryFee - discountAmount;
+
+    const [orderResult] = await conn.query<ResultSetHeader>(
+      `INSERT INTO orders
+        (id, voucher_id, subtotal, delivery_fee, discount, total, payment_method, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        adminId,
+        voucherId,
+        Number(subtotal.toFixed(2)),
+        deliveryFee,
+        Number(discountAmount.toFixed(2)),
+        Number(total.toFixed(2)),
+        paymentMethod,
+        "pending",
+      ]
+    );
+
+    const orderId = orderResult.insertId;
+
+    const orderItemsValues = normalizedItems.map((item) => [
+      orderId,
+      item.menu_id,
+      item.size,
+      item.quantity,
+      item.price,
+    ]);
+
+    await conn.query(
+      "INSERT INTO order_items (order_id, menu_id, size, quantity, price) VALUES ?",
+      [orderItemsValues]
+    );
+
+    await conn.query(
+      `INSERT INTO billing_details
+        (order_id, fullname, address, ward, district, city, phone)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        orderId,
+        fullname.trim(),
+        detail_address.trim(),
+        wardName?.trim() || null,
+        districtName?.trim() || null,
+        provinceName?.trim() || null,
+        phone.trim(),
+      ]
+    );
+
+    await conn.commit();
+
+    res.json({
+      message: "Thêm đơn hàng thành công",
+      order_id: orderId,
+      subtotal: Number(subtotal.toFixed(2)),
+      discount: Number(discountAmount.toFixed(2)),
+      total: Number(total.toFixed(2)),
+    });
+  } catch (error) {
+    await conn.rollback();
+    console.error("Lỗi thêm đơn hàng admin:", error);
+    res.status(500).json({ message: "Không thể tạo đơn hàng" });
+  } finally {
+    conn.release();
+  }
+});
+
+app.patch("/api/admin/orders/status", async (req: Request, res: Response) => {
+  const { ids, status } = req.body as {
+    ids?: number[];
+    status?: "pending" | "processing" | "completed" | "canceled";
+  };
+
+  const validStatuses = ["pending", "processing", "completed", "canceled"];
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ message: "Danh sách đơn cần cập nhật rỗng" });
+  }
+  if (!status || !validStatuses.includes(status)) {
+    return res.status(400).json({ message: "Trạng thái không hợp lệ" });
+  }
+
+  const validIds = ids.filter((id) => typeof id === "number" && id > 0);
+  if (validIds.length === 0) {
+    return res.status(400).json({ message: "Không có ID hợp lệ" });
+  }
+
+  try {
+    const placeholders = validIds.map(() => "?").join(", ");
+    const [result] = await db.query<ResultSetHeader>(
+      `UPDATE orders SET status = ? WHERE order_id IN (${placeholders})`,
+      [status, ...validIds]
+    );
+
+    res.json({
+      message: `Đã cập nhật trạng thái ${result.affectedRows} đơn`,
+      count: result.affectedRows,
+    });
+  } catch (error) {
+    console.error("Lỗi cập nhật trạng thái đơn:", error);
+    res.status(500).json({ message: "Không thể cập nhật trạng thái đơn" });
+  }
+});
+
 app.post("/api/change-password", authenticateToken, async (req: AuthRequest, res: Response) => {
   const userId = req.user!.id;
-  const {oldPassword, newPassWord} = req.body;
+  const { oldPassword, newPassWord } = req.body;
 
   if (!oldPassword || !newPassWord) {
-    return res.status(400).json({mesage: "Vui lòng nhập đầy đủ mật khẩu cũ và mới"});
+    return res.status(400).json({ mesage: "Vui lòng nhập đầy đủ mật khẩu cũ và mới" });
   }
 
   if (newPassWord.length < 6) {
-    return res.status(400).json({mesage: "Mật khẩu mới phải có ít nhất 6 ký tự"});
+    return res.status(400).json({ mesage: "Mật khẩu mới phải có ít nhất 6 ký tự" });
   }
 
   try {
@@ -1501,13 +1849,13 @@ app.post("/api/change-password", authenticateToken, async (req: AuthRequest, res
     );
 
     if (users.length === 0) {
-      return res.status(404).json({message: "Không tìm thấy người dùng"});
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
     }
 
     const user = users[0];
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      return res.status(400).json({message: "Mật khẩu cũ không đúng"});
+      return res.status(400).json({ message: "Mật khẩu cũ không đúng" });
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassWord, 10);
@@ -1516,10 +1864,10 @@ app.post("/api/change-password", authenticateToken, async (req: AuthRequest, res
       `UPDATE users SET password = ? WHERE id = ?`,
       [hashedNewPassword, userId]
     );
-    res.json({message: "Đổi mật khẩu thành công"});
+    res.json({ message: "Đổi mật khẩu thành công" });
   } catch (error) {
     console.error("Lỗi đổi mật khẩu:", error);
-    res.status(500).json({message: "Lỗi server"});
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
