@@ -118,10 +118,6 @@ const Shop: React.FC = () => {
                     <h3 className="text-lg font-bold uppercase text-white mb-2">
                       {item.name}
                     </h3>
-                    {/* <p className="text-sm text-gray-400 mb-4 flex-grow">
-                      {item.description ||
-                        "A small river named Duden flows by their place and supplies"}
-                    </p> */}
                     <p className="text-xl font-bold text-white mb-4">
                       $
                       {item.price

@@ -101,7 +101,7 @@ const Cart: React.FC = () => {
         <div className="bg-black text-white min-h-screen flex flex-col items-center justify-center text-3xl">
           <p>Giỏ hàng trống</p>
           <button
-            onClick={() => navigate("/menu")}
+            onClick={() => navigate("/shop")}
             className="mt-6 bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-3 px-8 rounded uppercase"
           >
             Tiếp tục mua sắm
