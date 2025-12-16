@@ -3,6 +3,7 @@ import {
   Routes,
   Route,
   useLocation,
+  Navigate,
 } from "react-router-dom";
 // import "./App.css";
 import Navbar from "./components/Navbar/Navbar";
@@ -22,8 +23,53 @@ import Checkout from "./pages/Checkout";
 import Login from "./pages/Login";
 import ShopPage from "./pages/Shop";
 import SingleProduct from "./pages/SingleProduct";
+<<<<<<< Updated upstream
 import { AdminLayout, Dashboard, AdminLogin, AdminMenu } from "./admin";
+=======
+import Profile from "./pages/user/Profile";
+import Order from "./pages/user/Order";
+import Change from "./pages/user/ChangePassword";
+import Address from "./pages/user/Addresses";
+import {
+  AdminLayout,
+  Dashboard,
+  AdminMenu,
+  AdminBlog,
+  AdminUser,
+  AdminVoucher,
+  AdminOrder,
+  PrintOrder,
+} from "./admin";
+>>>>>>> Stashed changes
 import React from "react";
+
+interface LoggedInUser {
+  id: number;
+  username: string;
+  role: string;
+}
+
+const AdminRoute: React.FC<{ children: React.ReactElement }> = ({
+  children,
+}) => {
+  const location = useLocation();
+  const storedUser = localStorage.getItem("user");
+
+  if (!storedUser) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  try {
+    const user: LoggedInUser = JSON.parse(storedUser);
+    if (user.role !== "admin") {
+      return <Navigate to="/" replace />;
+    }
+  } catch {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
 
 const AppContent: React.FC = () => {
   const location = useLocation();
@@ -60,10 +106,24 @@ const AppContent: React.FC = () => {
         {/* <Route path="/singleproduct" element={<SingleProduct />} /> */}
         <Route path="/singleproduct/:id" element={<SingleProduct />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="adminmenu" element={<AdminMenu />} />
+<<<<<<< Updated upstream
+=======
+          <Route path="blog" element={<AdminBlog />} />
+          <Route path="user" element={<AdminUser />} />
+          <Route path="voucher" element={<AdminVoucher />} />
+          <Route path="order" element={<AdminOrder />} />
+          <Route path="order/print/:orderId" element={<PrintOrder />} />
+>>>>>>> Stashed changes
         </Route>
       </Routes>
 

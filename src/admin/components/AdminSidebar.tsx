@@ -1,6 +1,36 @@
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
+interface LoggedInUser {
+  id: number;
+  username: string;
+  role: string;
+}
 
 export default function AdminSidebar() {
+  const [user, setUser] = useState<LoggedInUser | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const loggedInUser = localStorage.getItem("user");
+    if (loggedInUser) {
+      try {
+        setUser(JSON.parse(loggedInUser) as LoggedInUser);
+      } catch {
+        setUser(null);
+      }
+    } else {
+      setUser(null);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+    navigate("/");
+  };
+
   return (
     <div className="w-64 bg-gray-800 text-white flex flex-col text-center sticky top-0 z-20">
       <div className="p-4 border-b border-gray-700">
@@ -38,6 +68,32 @@ export default function AdminSidebar() {
           Quản lý bài viết
         </Link>
       </nav>
+<<<<<<< Updated upstream
+=======
+
+      <div className="p-4 space-y-3 overflow-y-auto">
+        <div className="flex items-center justify-start p-2 rounded transition">
+          <i className="fa-regular fa-user mr-3 w-5"></i>
+          {user ? (
+            <span className="truncate max-w-[140px] text-left">
+              Xin chào{" "}
+              <span className="font-semibold text-[#b6894b]">
+                {user.username}
+              </span>
+            </span>
+          ) : (
+            <span>Admin</span>
+          )}
+        </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-start text-red-500 hover:bg-gray-700 p-2 rounded transition"
+        >
+          <i className="fa-solid fa-arrow-right-from-bracket mr-3 w-5"></i>
+          Đăng xuất
+        </button>
+      </div>
+>>>>>>> Stashed changes
     </div>
   );
 }

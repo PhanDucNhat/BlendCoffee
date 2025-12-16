@@ -56,10 +56,12 @@ export default function AdminMenu() {
   const [deletingItem, setDeletingItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [localStatuses, setLocalStatuses] = useState<{
+    [key: number]: boolean;
+  }>({});
 
   const itemsPerPage = 10;
 
-  // === GỌI API ===
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -108,6 +110,11 @@ export default function AdminMenu() {
       setMenuItems(menuItems);
       setFilteredItems(menuItems);
       setCategories(catData);
+      const initialStatuses: { [key: number]: boolean } = {};
+      menuItems.forEach((menu) => {
+        initialStatuses[menu.menu_id] = menu.status === 1;
+      });
+      setLocalStatuses(initialStatuses);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Lỗi kết nối";
       setError(message);
@@ -141,6 +148,36 @@ export default function AdminMenu() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  const handleToggleStatus = async (menuId: number) => {
+    const currentStatus = localStatuses[menuId];
+    const newStatus = !currentStatus;
+
+    setLocalStatuses((prev) => ({ ...prev, [menuId]: newStatus }));
+
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/admin/menu/${menuId}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus ? 1 : 0 }),
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Cập nhật thất bại");
+      }
+      setMenuItems((prev) =>
+        prev.map((m) =>
+          m.menu_id === menuId ? { ...m, status: newStatus ? 1 : 0 } : m
+        )
+      );
+    } catch (err) {
+      setLocalStatuses((prev) => ({ ...prev, [menuId]: currentStatus }));
+      alert(err instanceof Error ? err.message : "Lỗi cập nhật");
+    }
+  };
 
   const toggleSelectAll = () => {
     if (
@@ -571,7 +608,7 @@ export default function AdminMenu() {
                       : "-"}
                   </td>
                   <td className="px-4 py-3">
-                    <span
+                    {/* <span
                       className={`inline-flex items-center gap-1 text-xs font-medium ${
                         item.status ? "text-green-700" : "text-red-700"
                       }`}
@@ -582,7 +619,20 @@ export default function AdminMenu() {
                         }`}
                       />
                       {item.status ? "Active" : "Inactive"}
-                    </span>
+                    </span> */}
+                    <div className="relative inline-block w-11 h-5">
+                      <input
+                        checked={localStatuses[item.menu_id] || false}
+                        id={`switch-${item.menu_id}`}
+                        type="checkbox"
+                        onChange={() => handleToggleStatus(item.menu_id)}
+                        className="peer appearance-none w-11 h-5 bg-slate-100 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
+                      />
+                      <label
+                        htmlFor={`switch-${item.menu_id}`}
+                        className="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-slate-800 cursor-pointer"
+                      ></label>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right space-x-1">
                     <button
@@ -999,21 +1049,10 @@ export default function AdminMenu() {
                   </div>
                   <div className="mt-4 flex items-center">
                     <input
-                      type="hidden"
-                      name="status"
-                      id="status_hidden"
-                      value="0"
-                    />
-                    <input
                       id="status_edit"
+                      name="status"
                       type="checkbox"
                       defaultChecked={editingItem.status === 1}
-                      onChange={(e) => {
-                        const hidden = document.getElementById(
-                          "status_hidden"
-                        ) as HTMLInputElement;
-                        if (hidden) hidden.value = e.target.checked ? "1" : "0";
-                      }}
                       className="w-4 h-4 text-cyan-600 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500 focus:ring-2"
                     />
                     <label
