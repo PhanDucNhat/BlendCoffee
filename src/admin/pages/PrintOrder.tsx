@@ -31,7 +31,6 @@ interface PrintOrderProps {
 }
 
 const printOrder: React.FC<PrintOrderProps> = ({ order }) => {
-  // Debug: log order data
   console.log("PrintOrder - order data:", order);
   const formatDateTime = (dateStr: string) => {
     const date = new Date(dateStr);
