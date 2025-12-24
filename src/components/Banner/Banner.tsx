@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { goToSlide } from "./Banner";
+import { goToSlide } from "./BannerUtils";
 
 interface Slide {
   id: number;
@@ -46,8 +46,6 @@ const Banner: React.FC = () => {
     return () => clearInterval(timer);
   }, [slides.length]);
 
-  //   const handleNext = () => setCurrent(nextSlide(current, slides.length));
-  //   const handlePrev = () => setCurrent(prevSlide(current, slides.length));
   const handleGoTo = (index: number) => setCurrent(goToSlide(index));
 
   return (
@@ -87,18 +85,6 @@ const Banner: React.FC = () => {
         </div>
       ))}
 
-      {/* <button
-        onClick={handlePrev}
-        className="absolute top-1/2 left-4 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white px-3 py-2 rounded-full text-2xl z-10"
-      >
-        &#10094;
-      </button>
-      <button
-        onClick={handleNext}
-        className="absolute top-1/2 right-4 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white px-3 py-2 rounded-full text-2xl z-10"
-      >
-        &#10095;
-      </button> */}
       <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-3 z-10">
         {slides.map((_, index) => (
           <span

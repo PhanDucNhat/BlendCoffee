@@ -212,11 +212,11 @@ const Navbar: React.FC = () => {
                     </Link>
                   </li>
                   <li className="flex text-red-500">
-                    <LogOut className="inline-block w-5 h-5 my-2 ml-2" />
                     <button
                       onClick={handleLogout}
                       className="block w-full text-left p-2 text-sm hover:text-red-400 hover:bg-[#2a2c2e] transition duration-200"
                     >
+                      <LogOut className="inline-block w-5 h-5 mx-2" />
                       Đăng xuất
                     </button>
                   </li>
