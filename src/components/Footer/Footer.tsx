@@ -105,20 +105,6 @@ const Footer: React.FC = () => {
             </ul>
           </div>
         </div>
-
-        <div className="border-t border-gray-800 pt-6 text-center text-sm text-gray-500">
-          Copyright ©{new Date().getFullYear()} All rights reserved | This
-          template is made with{" "}
-          <i className="fas fa-heart text-red-500 mx-1"></i> by{" "}
-          <a
-            href="https://colorlib.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white hover:underline"
-          >
-            Colorlib
-          </a>
-        </div>
       </div>
     </footer>
   );

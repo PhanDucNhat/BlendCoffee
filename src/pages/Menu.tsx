@@ -101,7 +101,7 @@ const MenuHeader: React.FC = () => {
                             <span className="text-amber-400 font-semibold">
                               $
                               {item.price
-                                ? parseFloat(String(item.price)).toFixed(2)
+                                ? parseFloat(String(item.price)).toFixed(3)
                                 : "0.00"}
                             </span>
                           )}

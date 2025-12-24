@@ -15,7 +15,6 @@ import {
   Download,
   AlertCircle,
   Edit,
-  Trash2,
   X,
   Layers2,
   Clock,
@@ -28,6 +27,7 @@ import {
   Phone,
   MapPin,
   Ticket,
+  House,
 } from "lucide-react";
 import { PrintOrder } from "..";
 
@@ -710,15 +710,9 @@ export default function AdminOrder() {
             <li className="inline-flex items-center">
               <Link
                 to="/admin/dashboard"
-                className="hover:text-gray-900 flex items-center"
+                className="hover:text-gray-900 flex items-center gap-2"
               >
-                <svg
-                  className="w-4 h-4 mr-1.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
-                </svg>
+                <House className="h-4 w-4" />
                 Trang chủ
               </Link>
             </li>
@@ -903,11 +897,6 @@ export default function AdminOrder() {
                 />
               </svg>
               Hủy đơn
-            </button>
-
-            <button className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition flex items-center gap-2">
-              <Trash2 className="w-4 h-4" />
-              Xóa ({selectedItems.length})
             </button>
           </div>
         </div>
@@ -1400,19 +1389,19 @@ export default function AdminOrder() {
                           <div className="space-y-3 text-sm">
                             <div className="grid grid-cols-2 gap-1 max-w-xs ml-auto">
                               <span className="text-gray-400 text-right">
-                                Subtotal
+                                Thành tiền
                               </span>
                               <span className="text-right">
                                 {subtotal.toFixed(2)}đ
                               </span>
                               <span className="text-gray-400 text-right">
-                                Delivery
+                                Vận chuyển
                               </span>
                               <span className="text-right">
                                 {deliveryFee.toFixed(2)}đ
                               </span>
                               <span className="text-gray-400 text-right">
-                                Discount
+                                Giảm giá
                               </span>
                               <span className="text-right text-green-500 font-medium">
                                 -{discount.toFixed(2)}đ
@@ -1420,7 +1409,7 @@ export default function AdminOrder() {
                             </div>
                             <hr className="border-gray-600 max-w-xs ml-auto" />
                             <div className="grid grid-cols-2 max-w-xs ml-auto text-lg font-bold">
-                              <span className="text-right">TOTAL</span>
+                              <span className="text-right">Tổng tiền</span>
                               <span className="text-right text-yellow-400 drop-shadow glow">
                                 {total.toFixed(2)}đ
                               </span>
@@ -1433,7 +1422,7 @@ export default function AdminOrder() {
                       <div className="grid grid-cols-6 gap-6 text-left">
                         <div className="sm:col-span-3">
                           <label className="flex text-sm font-medium text-gray-900 mb-2">
-                            Fullname
+                            Tên người nhận
                             <Asterisk className="text-red-600 h-3 w-3"></Asterisk>
                           </label>
                           <input
@@ -1445,7 +1434,7 @@ export default function AdminOrder() {
                         </div>
                         <div className="sm:col-span-3">
                           <label className="flex text-sm font-medium text-gray-900 mb-2">
-                            Phone
+                            Số điện thoại
                             <Asterisk className="text-red-600 h-3 w-3"></Asterisk>
                           </label>
                           <input
@@ -1459,7 +1448,7 @@ export default function AdminOrder() {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <label className="text-xs font-medium text-gray-700 block mb-1">
-                            City
+                            Tỉnh/thành phố
                           </label>
                           <select
                             required
@@ -1485,7 +1474,7 @@ export default function AdminOrder() {
                         </div>
                         <div>
                           <label className="text-xs font-medium text-gray-700 block mb-1">
-                            District
+                            Quận/huyện
                           </label>
                           <select
                             required
@@ -1511,7 +1500,7 @@ export default function AdminOrder() {
                         </div>
                         <div>
                           <label className="text-xs font-medium text-gray-700 block mb-1">
-                            Ward
+                            Phường/xã
                           </label>
                           <select
                             required
@@ -1541,7 +1530,7 @@ export default function AdminOrder() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-900 block mb-2">
-                          Address
+                          Địa chỉ chi tiết
                         </label>
                         <input
                           type="text"
@@ -1554,7 +1543,7 @@ export default function AdminOrder() {
                       <div>
                         <div className="flex">
                           <label className="text-sm font-medium text-gray-900 block mb-2">
-                            Note
+                            Ghi chú đơn hàng
                           </label>
                           <p className="text-gray-400 text-sm italic pl-2">
                             (Không bắt buộc)
@@ -1569,7 +1558,7 @@ export default function AdminOrder() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-900 block mb-2">
-                          Payment method
+                          Phương thức thanh toán
                         </label>
                         <div className="space-y-3">
                           <label className="flex items-center gap-3 cursor-pointer">
@@ -1582,7 +1571,7 @@ export default function AdminOrder() {
                               onChange={() => setPaymentMethod("cash")}
                             />
                             <span className="text-sm">
-                              Cash on Delivery (COD)
+                              Thanh toán khi nhận hàng (COD)
                             </span>
                           </label>
                           <label className="flex items-center gap-3 cursor-pointer">
@@ -1594,7 +1583,7 @@ export default function AdminOrder() {
                               checked={paymentMethod === "bank_transfer"}
                               onChange={() => setPaymentMethod("bank_transfer")}
                             />
-                            <span className="text-sm">VNPay</span>
+                            <span className="text-sm">Thanh toán quaVNPay</span>
                           </label>
                         </div>
                       </div>

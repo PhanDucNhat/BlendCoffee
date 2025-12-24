@@ -54,6 +54,13 @@ export default function AdminSidebar() {
           Trang chủ
         </Link>
         <Link
+          to="/admin/category"
+          className="flex items-center hover:bg-gray-700 p-2 rounded transition"
+        >
+          <i className="fa-solid fa-layer-group mr-3 w-5"></i>
+          Quản lý danh mục
+        </Link>
+        <Link
           to="/admin/adminmenu"
           className="flex items-center hover:bg-gray-700 p-2 rounded transition"
         >
@@ -61,15 +68,41 @@ export default function AdminSidebar() {
           Quản lý menu
         </Link>
         <Link
-          to="/admin/posts"
+          to="/admin/blog"
           className="flex items-center hover:bg-gray-700 p-2 rounded transition"
         >
           <i className="fa-solid fa-pen-to-square mr-3 w-5"></i>
           Quản lý bài viết
         </Link>
+        <Link
+          to="/admin/user"
+          className="flex items-center hover:bg-gray-700 p-2 rounded transition"
+        >
+          <i className="fa-solid fa-user mr-3 w-5"></i>
+          Quản lý nhân sự
+        </Link>
+        <Link
+          to="/admin/voucher"
+          className="flex items-center hover:bg-gray-700 p-2 rounded transition"
+        >
+          <i className="fa-solid fa-ticket mr-3 w-5"></i>
+          Quản lý voucher
+        </Link>
+        <Link
+          to="/admin/order"
+          className="flex items-center hover:bg-gray-700 p-2 rounded transition"
+        >
+          <i className="fa-solid fa-clipboard-list mr-3 w-5"></i>
+          Quản lý đơn hàng
+        </Link>
+        <Link
+          to="/admin/statistical"
+          className="flex items-center hover:bg-gray-700 p-2 rounded transition"
+        >
+          <i className="fa-solid fa-chart-bar mr-3 w-5"></i>
+          Báo cáo thống kê
+        </Link>
       </nav>
-<<<<<<< Updated upstream
-=======
 
       <div className="p-4 space-y-3 overflow-y-auto">
         <div className="flex items-center justify-start p-2 rounded transition">
@@ -93,7 +126,6 @@ export default function AdminSidebar() {
           Đăng xuất
         </button>
       </div>
->>>>>>> Stashed changes
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { LoginResponse, SignupResponse } from "../types/auth";
 
 interface FormValues {
   username: string;
@@ -9,8 +10,20 @@ interface FormValues {
   password: string;
 }
 
+interface AxiosErrorResponse {
+  message?: string;
+}
+
+interface AppError {
+  response?: {
+    data?: AxiosErrorResponse;
+  };
+  message?: string;
+}
+
 const LoginForm: React.FC = () => {
   const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const navigate = useNavigate();
   const [values, setValues] = useState<FormValues>({
     username: "",
@@ -27,28 +40,43 @@ const LoginForm: React.FC = () => {
 
     try {
       if (isLoginMode) {
-        await axios.post("http://localhost:5000/api/login", {
-          email: values.email,
-          password: values.password,
-        });
+        const response = await axios.post<LoginResponse>(
+          "http://localhost:5000/api/login",
+          {
+            email: values.email,
+            password: values.password,
+          }
+        );
+
+        const { token, user } = response.data;
+
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
 
         alert("Đăng nhập thành công!");
         navigate("/");
       } else {
-        await axios.post("http://localhost:5000/api/signup", {
+        await axios.post<SignupResponse>("http://localhost:5000/api/signup", {
           username: values.username,
           email: values.email,
           password: values.password,
         });
 
-        alert("Đăng ký thành công!");
+        alert("Đăng ký thành công! Vui lòng đăng nhập.");
         setIsLoginMode(true);
         setValues({ username: "", email: "", password: "" });
+        setShowPassword(false);
         window.scrollTo(0, 0);
       }
     } catch (error: unknown) {
-      alert("Sai tên đăng nhập hoặc mật khẩu!");
-      console.log(error);
+      const err = error as AppError;
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Đăng nhập thất bại! Vui lòng thử lại.";
+
+      alert(message);
+      console.error("Auth error:", error);
     }
   };
 
@@ -88,10 +116,10 @@ const LoginForm: React.FC = () => {
             Signup
           </button>
           <div
-            className={`absolute top-0 h-full w-1/2 rounded-full bg-gradient-to-r from-blue-700 via-cyan-600 to-cyan-200 transition-all ${
+            className={`absolute top-0 h-full w-1/2 rounded-full bg-gradient-to-r from-blue-700 via-cyan-600 to-cyan-200 transition-all duration-300 ${
               isLoginMode ? "left-0" : "left-1/2"
             }`}
-          ></div>
+          />
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -116,16 +144,28 @@ const LoginForm: React.FC = () => {
             value={values.email}
             onChange={handleChanges}
           />
-
-          <input
-            type="password"
-            placeholder="Password"
-            required
-            className="w-full p-3 border-b-2 border-gray-300 outline-none focus:border-cyan-500 placeholder-gray-400"
-            name="password"
-            value={values.password}
-            onChange={handleChanges}
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              required
+              className="w-full p-3 border-b-2 border-gray-300 outline-none focus:border-cyan-500 placeholder-gray-400 pr-12"
+              name="password"
+              value={values.password}
+              onChange={handleChanges}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-cyan-600 transition"
+            >
+              {showPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
+            </button>
+          </div>
 
           {isLoginMode && (
             <div className="text-right">
@@ -148,6 +188,7 @@ const LoginForm: React.FC = () => {
               onClick={(e) => {
                 e.preventDefault();
                 setIsLoginMode(!isLoginMode);
+                setShowPassword(false);
               }}
               className="text-cyan-600 hover:underline"
             >

@@ -9,6 +9,7 @@ import {
   Edit,
   Trash2,
   X,
+  House,
 } from "lucide-react";
 
 interface MenuItem {
@@ -26,6 +27,8 @@ interface MenuItem {
 interface Category {
   category_id: number;
   category_name: string;
+  status: number;
+  display: number;
 }
 
 interface ApiMenuItem {
@@ -404,15 +407,9 @@ export default function AdminMenu() {
               <li className="inline-flex items-center">
                 <Link
                   to="/admin/dashboard"
-                  className="hover:text-gray-900 flex items-center"
+                  className="hover:text-gray-900 flex items-center gap-2"
                 >
-                  <svg
-                    className="w-4 h-4 mr-1.5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
-                  </svg>
+                  <House className="h-4 w-4" />
                   Trang chủ
                 </Link>
               </li>
@@ -580,10 +577,10 @@ export default function AdminMenu() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 overflow-hidden">
+                      <div className="w-[53px] h-[53px] rounded-full bg-gray-200 border-2 border-dashed border-gray-400 overflow-hidden">
                         {item.image_url ? (
                           <img
-                            src={`/${item.image_url}`}
+                            src={`${item.image_url}`}
                             alt={item.name}
                             className="w-full h-full object-cover"
                           />
@@ -608,18 +605,6 @@ export default function AdminMenu() {
                       : "-"}
                   </td>
                   <td className="px-4 py-3">
-                    {/* <span
-                      className={`inline-flex items-center gap-1 text-xs font-medium ${
-                        item.status ? "text-green-700" : "text-red-700"
-                      }`}
-                    >
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          item.status ? "bg-green-500" : "bg-red-500"
-                        }`}
-                      />
-                      {item.status ? "Active" : "Inactive"}
-                    </span> */}
                     <div className="relative inline-block w-11 h-5">
                       <input
                         checked={localStatuses[item.menu_id] || false}
@@ -721,11 +706,17 @@ export default function AdminMenu() {
                         className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                       >
                         <option value="">Chọn danh mục</option>
-                        {categories.map((cat) => (
-                          <option key={cat.category_id} value={cat.category_id}>
-                            {cat.category_name}
-                          </option>
-                        ))}
+                        {categories
+                          .filter((cat) => cat.status === 1)
+                          .sort((a, b) => a.display - b.display)
+                          .map((cat) => (
+                            <option
+                              key={cat.category_id}
+                              value={cat.category_id}
+                            >
+                              {cat.category_name}
+                            </option>
+                          ))}
                       </select>
                     </div>
                     <div className="col-span-6">
@@ -783,22 +774,6 @@ export default function AdminMenu() {
                         onChange={handleImageChange}
                         className="mt-2 block w-full text-sm text-gray-900 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-600 file:text-white hover:file:bg-cyan-700"
                       />
-
-                      {/* {imagePreview && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImagePreview("");
-                            const input = document.querySelector(
-                              'input[type="file"]'
-                            ) as HTMLInputElement;
-                            if (input) input.value = "";
-                          }}
-                          className="mt-2 text-xs text-red-600 hover:text-red-800"
-                        >
-                          Xóa ảnh
-                        </button>
-                      )} */}
 
                       <p className="mt-1 text-xs text-gray-500">
                         PNG, JPG, JPEG (tối đa 5MB)
@@ -880,7 +855,7 @@ export default function AdminMenu() {
                     </label>
                   </div>
                 </div>
-                <div className="flex items-center p-3 py-1 border-t border-gray-200 rounded-b space-x-2">
+                <div className="flex justify-end p-3 py-1 border-t border-gray-200 rounded-b space-x-2">
                   <button
                     type="submit"
                     className="text-white bg-cyan-600 hover:bg-cyan-700 focus:ring-4 focus:ring-cyan-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
@@ -946,12 +921,17 @@ export default function AdminMenu() {
                         required
                         className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                       >
-                        <option value="">Chọn danh mục</option>
-                        {categories.map((cat) => (
-                          <option key={cat.category_id} value={cat.category_id}>
-                            {cat.category_name}
-                          </option>
-                        ))}
+                        {categories
+                          .filter((cat) => cat.status === 1)
+                          .sort((a, b) => a.display - b.display)
+                          .map((cat) => (
+                            <option
+                              key={cat.category_id}
+                              value={cat.category_id}
+                            >
+                              {cat.category_name}
+                            </option>
+                          ))}
                       </select>
                     </div>
                     <div className="col-span-6">
@@ -962,7 +942,7 @@ export default function AdminMenu() {
                         {imagePreview || editingItem.image_url ? (
                           <>
                             <img
-                              src={imagePreview || `/${editingItem.image_url}`}
+                              src={imagePreview || `${editingItem.image_url}`}
                               alt="Preview"
                               className="w-full h-full object-cover"
                             />
@@ -1064,7 +1044,7 @@ export default function AdminMenu() {
                   </div>
                 </div>
 
-                <div className="flex items-center p-3 py-1 border-t border-gray-200 rounded-b space-x-2">
+                <div className="flex justify-end p-3 py-1 border-t border-gray-200 rounded-b space-x-2">
                   <button
                     type="submit"
                     className="text-white bg-cyan-600 hover:bg-cyan-700 focus:ring-4 focus:ring-cyan-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
@@ -1114,18 +1094,20 @@ export default function AdminMenu() {
                 <h3 className="text-xl font-normal text-gray-500 mt-5 mb-6">
                   Bạn có chắc muốn xóa <strong>{deletingItem.name}</strong>?
                 </h3>
-                <button
-                  onClick={handleDelete}
-                  className="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-base inline-flex items-center px-3 py-2.5 text-center mr-2"
-                >
-                  Yes, I'm sure
-                </button>
-                <button
-                  onClick={closeModals}
-                  className="text-gray-900 bg-white hover:bg-gray-100 focus:ring-4 focus:ring-cyan-200 border border-gray-200 font-medium inline-flex items-center rounded-lg text-base px-3 py-2.5 text-center"
-                >
-                  No, cancel
-                </button>
+                <div className="mt-6 flex justify-center gap-4">
+                  <button
+                    onClick={handleDelete}
+                    className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Xóa
+                  </button>
+                  <button
+                    onClick={closeModals}
+                    className="px-6 py-2.5 bg-gray-200 rounded-lg hover:bg-gray-300"
+                  >
+                    Hủy
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1151,20 +1133,20 @@ export default function AdminMenu() {
                   ></path>
                 </svg>
                 <h3 className="text-xl font-normal text-gray-500 mt-5 mb-6">
-                  Bạn có chắc muốn xóa{" "}
+                  Bạn có chắc muốn xóa
                   <strong>{selectedItems.length} món ăn đã chọn không</strong>?
                 </h3>
                 <button
                   onClick={handleBulkDelete}
                   className="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-base inline-flex items-center px-3 py-2.5 text-center mr-2"
                 >
-                  Yes, I'm sure
+                  Xóa
                 </button>
                 <button
                   onClick={() => setShowBulkDeleteModal(false)}
                   className="text-gray-900 bg-white hover:bg-gray-100 focus:ring-4 focus:ring-cyan-200 border border-gray-200 font-medium inline-flex items-center rounded-lg text-base px-3 py-2.5 text-center"
                 >
-                  No, cancel
+                  Hủy
                 </button>
               </div>
             </div>

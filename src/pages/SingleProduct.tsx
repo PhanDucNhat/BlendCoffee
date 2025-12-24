@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 interface MenuDetail {
   menu_id: number;
@@ -9,7 +9,7 @@ interface MenuDetail {
   category_id: number;
   category_name?: string;
   size: string;
-  price: number; // Đảm bảo price là number
+  price: number;
 }
 
 const SingleProduct: React.FC = () => {
@@ -20,6 +20,14 @@ const SingleProduct: React.FC = () => {
   const [quantity, setQuantity] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [shopData, setShopData] = useState<Record<string, MenuDetail[]>>({});
+  const [activeCategory, setActiveCategory] = useState<string>("");
+
+  const navigate = useNavigate();
+
+  const handleSingleProduct = (id: number) => {
+    navigate(`/singleproduct/${id}`);
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -52,7 +60,7 @@ const SingleProduct: React.FC = () => {
 
         const normalizedData = data.map((item) => ({
           ...item,
-          price: Number(item.price), // ← QUAN TRỌNG: Chuyển string → number
+          price: Number(item.price),
         }));
 
         const baseProduct = normalizedData[0];
@@ -73,6 +81,35 @@ const SingleProduct: React.FC = () => {
 
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/menu");
+        if (!response.ok) throw new Error("Lỗi khi lấy dữ liệu menu");
+
+        const data: MenuDetail[] = await response.json();
+
+        const grouped: Record<string, MenuDetail[]> = {};
+        data.forEach((item) => {
+          const catName = item.category_name || `Category ${item.category_id}`;
+          if (!grouped[catName]) grouped[catName] = [];
+          grouped[catName].push(item);
+        });
+
+        setShopData(grouped);
+
+        const firstCategory = Object.keys(grouped)[0];
+        if (firstCategory) setActiveCategory(firstCategory);
+      } catch (err: unknown) {
+        console.error("Lỗi khi tải menu:", err);
+        if (err instanceof Error) setError(err.message);
+        else setError("Đã xảy ra lỗi không xác định");
+      }
+    };
+
+    fetchMenu();
+  }, []);
 
   if (loading) {
     return (
@@ -123,7 +160,7 @@ const SingleProduct: React.FC = () => {
               <img
                 src={
                   product.image_url
-                    ? `/${product.image_url}`
+                    ? `${product.image_url}`
                     : "/images/default.jpg"
                 }
                 alt={product.name}
@@ -135,7 +172,7 @@ const SingleProduct: React.FC = () => {
               <h1 className="text-3xl font-bold uppercase">{product.name}</h1>
 
               <p className="text-3xl font-bold text-yellow-500">
-                ${currentPrice.toFixed(2)}
+                ${currentPrice.toFixed(3)}
               </p>
 
               <div className="text-gray-400 text-sm space-y-4">
@@ -183,11 +220,113 @@ const SingleProduct: React.FC = () => {
                 </button>
               </div>
 
-              <button className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-3 px-8 rounded-md uppercase transition">
+              <button
+                onClick={async () => {
+                  const token = localStorage.getItem("token");
+                  if (!token) {
+                    alert("Vui lòng đăng nhập để thêm vào giỏ hàng!");
+                    navigate("/login");
+                    return;
+                  }
+
+                  try {
+                    const response = await fetch(
+                      "http://localhost:5000/api/cart/add",
+                      {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({
+                          menu_id: product.menu_id,
+                          size: selectedSize,
+                          quantity: quantity,
+                        }),
+                      }
+                    );
+
+                    const data = await response.json();
+                    if (response.ok) {
+                      alert("Đã thêm vào giỏ hàng!");
+                    } else {
+                      alert(data.message || "Lỗi khi thêm vào giỏ");
+                    }
+                  } catch {
+                    alert("Lỗi kết nối server");
+                  }
+                }}
+                className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-3 px-8 rounded-md uppercase transition"
+              >
                 Add to Cart
               </button>
             </div>
           </div>
+        </div>
+      </section>
+      <section className="bg-black py-3 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-center mb-12">
+            <div className="flex gap-8 border-gray-800 flex-wrap justify-center">
+              {Object.keys(shopData).map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setActiveCategory(category)}
+                  className={`relative pb-3 text-2xl font-medium transition-all ${
+                    activeCategory === category
+                      ? "text-yellow-500"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  {category}
+                  {activeCategory === category && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500"></span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error ? (
+            <p className="text-center text-red-400 text-lg py-10">
+              Lỗi: {error}
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {shopData[activeCategory]?.map((item) => (
+                <div
+                  key={item.menu_id}
+                  className="bg-gray-950 rounded-lg overflow-hidden flex flex-col"
+                >
+                  <div className="h-48">
+                    <img
+                      src={item.image_url || "/images/default.jpg"}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <div className="p-6 flex flex-col flex-grow text-center">
+                    <h3 className="text-lg font-bold uppercase text-white mb-2">
+                      {item.name}
+                    </h3>
+                    <p className="text-xl font-bold text-white mb-4">
+                      $
+                      {item.price
+                        ? parseFloat(String(item.price)).toFixed(2)
+                        : "0.00"}
+                    </p>
+                    <button
+                      onClick={() => handleSingleProduct(item.menu_id)}
+                      className="border border-yellow-600 text-yellow-600 px-6 py-2 rounded-md hover:bg-yellow-600 hover:text-black transition text-sm font-medium"
+                    >
+                      Add to cart
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </>

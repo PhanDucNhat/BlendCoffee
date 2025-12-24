@@ -1,14 +1,16 @@
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { db } from "./db.js";
 import bcrypt from "bcrypt"; //mã hóa mk
 import jwt from "jsonwebtoken"; //xác thực users
 import { RowDataPacket, ResultSetHeader } from "mysql2";
+import { PoolConnection } from "mysql2/promise";
 
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { error } from "console";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,6 +21,8 @@ interface User extends RowDataPacket {
   email: string;
   password: string;
   role: string;
+  phone: string;
+  address: string;
 }
 
 interface MenuDetail extends RowDataPacket {
@@ -32,8 +36,6 @@ interface MenuDetail extends RowDataPacket {
   price: number;
 }
 
-<<<<<<< Updated upstream
-=======
 interface CheckoutBilling {
   fullName: string;
   phone: string;
@@ -132,6 +134,11 @@ interface AddressItem extends RowDataPacket {
   is_default: 1 | 0;
 }
 
+interface OrderStatusCount extends RowDataPacket {
+  status: string;
+  count: number;
+}
+
 const fetchCartDetails = async (conn: PoolConnection, userId: number) => {
   const [cartRows] = await conn.query<RowDataPacket[]>(
     "SELECT cart_id FROM cart WHERE id = ?",
@@ -211,11 +218,10 @@ interface AuthRequest extends Request {
 //   comments_count: number;
 // }
 
->>>>>>> Stashed changes
 const app = express();
-app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cors());
 
 
 const storage = multer.diskStorage({
@@ -227,11 +233,30 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-  cb(null, file.originalname);
-}
+    cb(null, file.originalname);
+  }
 });
 
 const upload = multer({ storage });
+const JWT_SECRET = "secretkey";
+
+const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "Không có token" });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ message: "Token không hợp lệ hoặc đã hết hạn" });
+    }
+
+    req.user = decoded as { id: number; role: string };
+    next();
+  });
+};
 
 // API test kết nối
 app.get("/api/test", async (req: Request, res: Response) => {
@@ -253,6 +278,327 @@ app.get("/api/navbar", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
   }
 });
+
+app.get("/api/voucher", async (req: Request, res: Response) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM voucher");
+    res.json(rows);
+  } catch (error) {
+    console.error("Lỗi khi truy vấn voucher:", error);
+    res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
+  }
+});
+
+app.post("/api/admin/voucher/add", upload.single("image"), async (req: Request, res: Response) => {
+  const { title, description, quantity, start_date, end_date, status, discount_type, discount_value } = req.body;
+  const image_url = req.file ? `/images/${req.file.filename}` : null;
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      `INSERT INTO voucher (title, description, image_url, quantity, start_date, end_date, status, discount_type, discount_value)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        title,
+        description || null,
+        image_url,
+        quantity,
+        start_date,
+        end_date,
+        status === "on" ? 1 : 0,
+        discount_type,
+        discount_value,
+      ]
+    );
+    res.json({ message: "Thêm voucher thành công!", voucher_id: result.insertId });
+  } catch (error) {
+    console.error("Lỗi thêm voucher:", error);
+    res.status(500).json({ error: "Không thể thêm voucher" });
+  }
+});
+
+app.put("/api/admin/voucher/:id", upload.single("image"), async (req: Request, res: Response) => {
+  const voucherId = Number(req.params.id);
+  if (isNaN(voucherId)) return res.status(400).json({ error: "ID không hợp lệ" });
+
+  const {
+    title,
+    description,
+    quantity: quantityStr,
+    start_date: startDateStr,
+    end_date: endDateStr,
+    status: statusStr,
+    discount_type,
+    discount_value: discountValueStr
+  } = req.body as {
+    title?: string;
+    description?: string;
+    quantity?: string;
+    start_date?: string;
+    end_date?: string;
+    status?: string;
+    discount_type?: string;
+    discount_value?: string;
+  };
+
+  const image_url = req.file ? `/images/${req.file.filename}` : undefined;
+
+  const updates: string[] = [];
+  const values: (string | number | null)[] = [];
+
+  if (title !== undefined && title.trim() !== "") {
+    updates.push("title = ?");
+    values.push(title.trim());
+  }
+
+  if (description !== undefined) {
+    updates.push("description = ?");
+    values.push(description.trim() || null);
+  }
+
+  if (image_url) {
+    updates.push("image_url = ?");
+    values.push(image_url);
+  }
+
+  if (quantityStr !== undefined && quantityStr.trim() !== "") {
+    const quantity = Number(quantityStr);
+    if (!isNaN(quantity) && quantity >= 0) {
+      updates.push("quantity = ?");
+      values.push(quantity);
+    }
+  }
+
+  if (startDateStr && startDateStr.trim() !== "") {
+    updates.push("start_date = ?");
+    values.push(startDateStr);
+  }
+
+  if (endDateStr && endDateStr.trim() !== "") {
+    updates.push("end_date = ?");
+    values.push(endDateStr);
+  }
+
+  if (statusStr !== undefined) {
+    const status = statusStr === "true" || statusStr === "1" || statusStr === "on" ? 1 : 0;
+    updates.push("status = ?");
+    values.push(status);
+  }
+
+  if (discount_type !== undefined && discount_type.trim() !== "") {
+    if (discount_type !== "percent" && discount_type !== "fixed") {
+      return res.status(400).json({ error: "discount_type phải là 'percent' hoặc 'fixed'" });
+    }
+    updates.push("discount_type = ?");
+    values.push(discount_type);
+  }
+
+  if (discountValueStr !== undefined && discountValueStr.trim() !== "") {
+    const discountValue = Number(discountValueStr);
+    if (isNaN(discountValue) || discountValue < 0) {
+      return res.status(400).json({ error: "discount_value không hợp lệ" });
+    }
+    updates.push("discount_value = ?");
+    values.push(discountValue);
+  }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ error: "Không có dữ liệu để cập nhật" });
+  }
+
+  values.push(voucherId);
+
+  try {
+    await db.query(`UPDATE voucher SET ${updates.join(", ")} WHERE voucher_id = ?`, values);
+    res.json({ message: "Cập nhật voucher thành công" });
+  } catch (error) {
+    console.error("Lỗi cập nhật:", error);
+    res.status(500).json({ error: "Không thể cập nhật" });
+  }
+});
+
+app.delete("/api/admin/voucher/:id", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  if (!id || id <= 0) return res.status(400).json({ error: "ID không hợp lệ" });
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(`DELETE FROM voucher WHERE voucher_id = ?`, [id])
+    if (result.affectedRows === 0) {
+      return res.status(400).json({ error: "Không tìm thấy voucher" });
+    }
+    res.json({ message: "Xóa voucher thành công!" });
+  } catch (error) {
+    console.error("Lỗi xóa voucher:", error);
+    res.status(500).json({ error: "Lỗi server khi xóa" });
+  }
+});
+
+app.patch("/api/admin/voucher/bulk-status", async (req: Request, res: Response) => {
+  const { ids, status } = req.body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "Danh sách ID không hợp lệ" });
+  }
+  if (status !== 0 && status !== 1) {
+    return res.status(400).json({ error: "Trạng thái phải là 0 hoặc 1" });
+  }
+
+  const conn = await db.getConnection();
+
+  try {
+    const placeholders = ids.map(() => "?").join(", ");
+    const query = `UPDATE voucher SET status = ? WHERE voucher_id IN (${placeholders})`;
+
+    await conn.query(query, [status, ...ids]);
+
+    res.json({ message: "Cập nhật trạng thái thành công", count: ids.length });
+  } catch (error) {
+    console.error("Lỗi bulk update status:", error);
+    res.status(500).json({ error: "Lỗi server khi cập nhật trạng thái" });
+  } finally {
+    conn.release();
+  }
+});
+
+app.delete("/api/admin/voucher/bulk-delete", async (req: Request, res: Response) => {
+  const { ids } = req.body as { ids: number[] };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "Danh sách ID không hợp lệ" });
+  }
+
+  const validIds = ids.filter(id => typeof id === "number" && id > 0);
+  if (validIds.length === 0) return res.status(400).json({ error: "Không có ID hợp lệ" });
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM voucher WHERE voucher_id IN (?)",
+      [validIds]
+    );
+    res.json({ message: `Đã xóa ${result.affectedRows} voucher!` });
+  } catch (error) {
+    console.error("Lỗi xóa hàng loạt:", error);
+    res.status(500).json({ error: "Lỗi server" });
+  }
+});
+
+app.get("/api/categories", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM menu_category");
+    res.json(rows);
+  } catch (err) {
+    console.error("Lỗi lấy danh mục:", err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
+});
+
+app.post("/api/admin/category/add", async (req: Request, res: Response) => {
+  const { category_name, status, display } = req.body;
+
+  try {
+    await db.query(
+      `UPDATE menu_category SET display = display + 1 WHERE display >= ?`,
+      [display || 0]
+    );
+
+    const [result] = await db.query<ResultSetHeader>(
+      `INSERT INTO menu_category (category_name, status, display)
+      VALUES (?, ?, ?)`,
+      [category_name, status === "1" ? 1 : 0, display || 0]
+    );
+    res.json({ message: "Thêm danh mục thành công!", category_id: result.insertId });
+  } catch (error) {
+    console.error("Lỗi thêm danh mục:", error);
+    res.status(500).json({ error: "Không thể thêm danh mục" });
+  }
+});
+
+app.put("/api/admin/category/:id", async (req: Request, res: Response) => {
+  const categoryId = Number(req.params.id);
+  if (isNaN(categoryId)) return res.status(400).json({ error: "ID không hợp lệ" });
+
+  const { category_name, status, display } = req.body as { category_name?: string; status?: string; display?: number };
+
+  try {
+    const [currentRows] = await db.query<RowDataPacket[]>(
+      "SELECT display FROM menu_category WHERE category_id = ?",
+      [categoryId]
+    );
+    if (currentRows.length === 0) return res.status(404).json({ error: "Không tìm thấy danh mục" });
+    const oldDisplay = currentRows[0].display;
+
+    if (display !== undefined && display !== oldDisplay) {
+      if (display < oldDisplay) {
+        await db.query(
+          `UPDATE menu_category SET display = display + 1 WHERE display >= ? AND display < ? AND category_id != ?`,
+          [display, oldDisplay, categoryId]
+        );
+      } else {
+        await db.query(
+          `UPDATE menu_category SET display = display - 1 WHERE display > ? AND display <= ? AND category_id != ?`,
+          [oldDisplay, display, categoryId]
+        );
+      }
+    }
+
+    const updates: string[] = [];
+    const values: (string | number | null)[] = [];
+
+    if (category_name !== undefined) { updates.push("category_name = ?"); values.push(category_name); }
+    if (status !== undefined) { updates.push("status = ?"); values.push(status === "1" ? 1 : 0); }
+    if (display !== undefined) { updates.push("display = ?"); values.push(display); }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: "Không có dữ liệu để cập nhật" });
+    }
+
+    values.push(categoryId);
+
+    await db.query(`UPDATE menu_category SET ${updates.join(", ")} WHERE category_id = ?`, values);
+    res.json({ message: "Cập nhật danh mục thành công!" });
+  } catch (error) {
+    console.error("Lỗi cập nhật danh mục:", error);
+    res.status(500).json({ error: "Không thể cập nhật" });
+  }
+});
+
+app.delete("/api/admin/category/:id", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  if (!id || id <= 0) return res.status(400).json({ error: "ID không hợp lệ" });
+
+  try {
+    const [result] = await db.query<ResultSetHeader>("DELETE FROM menu_category WHERE category_id = ?", [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Không tìm thấy danh mục" });
+    }
+    res.json({ message: "Xóa danh mục thành công!" });
+  } catch (error) {
+    console.error("Lỗi xóa danh mục:", error);
+    res.status(500).json({ error: "Lỗi server khi xóa" });
+  }
+});
+
+app.delete("/api/admin/category/bulk-delete", async (req: Request, res: Response) => {
+  const { ids } = req.body as { ids: number[] };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "Danh sách ID không hợp lệ" });
+  }
+
+  const validIds = ids.filter(id => typeof id === "number" && id > 0);
+  if (validIds.length === 0) return res.status(400).json({ error: "Không có ID hợp lệ" });
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM menu_category WHERE category_id IN (?)",
+      [validIds]
+    );
+    res.json({ message: `Đã xóa ${result.affectedRows} danh mục!` });
+  } catch (error) {
+    console.error("Lỗi xóa hàng loạt:", error);
+    res.status(500).json({ error: "Lỗi server" });
+  }
+});
+
 
 app.get("/api/menu", async (req: Request, res: Response) => {
   try {
@@ -285,25 +631,25 @@ app.post(
   upload.single("image"),
   async (req: Request, res: Response) => {
     const { name, description, category_id, price_small, price_medium, price_large, status } = req.body;
-    const image_url = req.file ? `images/${req.file.filename}` : null;
+    const image_url = req.file ? `/images/${req.file.filename}` : null;
 
     const conn = await db.getConnection();
     await conn.beginTransaction();
 
     try {
       const [menuResult] = await conn.query<ResultSetHeader>(
-  `INSERT INTO menu (name, description, image_url, category_id, status) 
+        `INSERT INTO menu (name, description, image_url, category_id, status) 
    VALUES (?, ?, ?, ?, ?)`,
-  [
-    name,
-    description || null,
-    image_url,
-    category_id,
-    status === "on" ? 1 : 0,
-  ]
-);
+        [
+          name,
+          description || null,
+          image_url,
+          category_id,
+          status === "on" ? 1 : 0,
+        ]
+      );
 
-const menuId = menuResult.insertId;
+      const menuId = menuResult.insertId;
 
       const sizes = [
         { size: "Small", price: parseFloat(price_small) },
@@ -416,18 +762,6 @@ app.put("/api/admin/menu/:id", upload.single("image"), async (req: Request, res:
       updateValues.push(statusVal);
     }
 
-<<<<<<< Updated upstream
-    const {
-      name,
-      description,
-      category_id,
-      price_small,
-      price_medium,
-      price_large,
-      status,
-    } = req.body;
-    const image_url = req.file ? `images/${req.file.filename}` : null;
-=======
     if (updateFields.length > 0) {
       updateValues.push(menuId);
       await conn.query(
@@ -439,7 +773,6 @@ app.put("/api/admin/menu/:id", upload.single("image"), async (req: Request, res:
       price_small !== undefined ||
       price_medium !== undefined ||
       price_large !== undefined;
->>>>>>> Stashed changes
 
     if (hasPriceData) {
       await conn.query(`DELETE FROM menu_sizes WHERE menu_id = ?`, [menuId]);
@@ -594,17 +927,7 @@ app.get("/api/admin/menu-sizes", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
   }
 });
-
-app.get("/api/categories", async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT category_id, category_name FROM menu_category");
-    res.json(rows);
-  } catch (err) {
-    console.error("Lỗi lấy danh mục:", err);
-    res.status(500).json({ error: "Lỗi server" });
-  }
-});
-
+    
 
 app.get("/api/blog", async (req: Request, res: Response) => {
   try {
@@ -613,6 +936,89 @@ app.get("/api/blog", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Lỗi khi truy vấn blog:", error);
     res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
+  }
+});
+
+app.post("/api/admin/blog/add", upload.single("image"), async (req: Request, res: Response) => {
+  const { title, description } = req.body;
+  const image_url = req.file ? `/images/${req.file.filename}` : null;
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      `INSERT INTO blog (title, description, image_url) VALUES (?, ?, ?)`,
+      [title, description || null, image_url]
+    );
+    res.json({ message: "Thêm bài viết thành công!", blog_id: result.insertId });
+  } catch (error) {
+    console.error("Lỗi thêm blog:", error);
+    res.status(500).json({ error: "Không thể thêm bài viết" });
+  }
+});
+
+app.put("/api/admin/blog/:id", upload.single("image"), async (req: Request, res: Response) => {
+  const blogId = Number(req.params.id);
+  if (isNaN(blogId)) return res.status(400).json({ error: "ID không hợp lệ" });
+
+  const { title, description } = req.body as { title?: string; description?: string };
+  const image_url = req.file ? `/images/${req.file.filename}` : undefined;
+
+  const updates: string[] = [];
+  const values: (string | number | null)[] = [];
+
+  if (title !== undefined) { updates.push("title = ?"); values.push(title); }
+  if (description !== undefined) { updates.push("description = ?"); values.push(description || null); }
+  if (image_url) { updates.push("image_url = ?"); values.push(image_url); }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ error: "Không có dữ liệu để cập nhật" });
+  }
+
+  values.push(blogId);
+
+  try {
+    await db.query(`UPDATE blog SET ${updates.join(", ")} WHERE blog_id = ?`, values);
+    res.json({ message: "Cập nhật bài viết thành công!" });
+  } catch (error) {
+    console.error("Lỗi cập nhật blog:", error);
+    res.status(500).json({ error: "Không thể cập nhật" });
+  }
+});
+
+app.delete("/api/admin/blog/:id", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  if (!id || id <= 0) return res.status(400).json({ error: "ID không hợp lệ" });
+
+  try {
+    const [result] = await db.query<ResultSetHeader>("DELETE FROM blog WHERE blog_id = ?", [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Không tìm thấy bài viết" });
+    }
+    res.json({ message: "Xóa bài viết thành công!" });
+  } catch (error) {
+    console.error("Lỗi xóa blog:", error);
+    res.status(500).json({ error: "Lỗi server khi xóa" });
+  }
+});
+
+app.delete("/api/admin/blog/bulk-delete", async (req: Request, res: Response) => {
+  const { ids } = req.body as { ids: number[] };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "Danh sách ID không hợp lệ" });
+  }
+
+  const validIds = ids.filter(id => typeof id === "number" && id > 0);
+  if (validIds.length === 0) return res.status(400).json({ error: "Không có ID hợp lệ" });
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM blog WHERE blog_id IN (?)",
+      [validIds]
+    );
+    res.json({ message: `Đã xóa ${result.affectedRows} bài viết!` });
+  } catch (error) {
+    console.error("Lỗi xóa hàng loạt:", error);
+    res.status(500).json({ error: "Lỗi server" });
   }
 });
 
@@ -626,8 +1032,6 @@ app.get("/api/user", async (req: Request, res: Response) => {
   }
 });
 
-<<<<<<< Updated upstream
-=======
 app.get("/api/user/:id", async (req: Request, res: Response) => {
   const userId = Number(req.params.id);
   if (isNaN(userId) || userId <= 0) {
@@ -1528,11 +1932,11 @@ app.post("/api/change-password", authenticateToken, async (req: AuthRequest, res
   const { oldPassword, newPassWord } = req.body;
 
   if (!oldPassword || !newPassWord) {
-    return res.status(400).json({ mesage: "Vui lòng nhập đầy đủ mật khẩu cũ và mới" });
+    return res.status(400).json({ message: "Vui lòng nhập đầy đủ mật khẩu cũ và mới" });
   }
 
   if (newPassWord.length < 6) {
-    return res.status(400).json({ mesage: "Mật khẩu mới phải có ít nhất 6 ký tự" });
+    return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự" });
   }
 
   try {
@@ -1738,7 +2142,49 @@ app.delete("/api/addresses/delete/:id", authenticateToken, async (req: AuthReque
   }
 });
 
->>>>>>> Stashed changes
+app.get("/api/admin/dashboard-stats", async (req: Request, res: Response) => {
+  try {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+    const [orderCountResult] = await db.query<RowDataPacket[]>(
+      "SELECT COUNT(*) as count FROM orders WHERE created_at >= ? AND created_at < ?",
+      [startOfDay, endOfDay]
+    );
+    const orderCount = (orderCountResult[0] as { count: number }).count;
+
+    const [revenueResult] = await db.query<RowDataPacket[]>(
+      "SELECT SUM(total) as revenue FROM orders WHERE created_at >= ? AND created_at < ?",
+      [startOfDay, endOfDay]
+    );
+    const revenue = (revenueResult[0] as { revenue: number | null }).revenue || 0;
+
+    const [statusCounts] = await db.query<OrderStatusCount[]>(
+      "SELECT status, COUNT(*) as count FROM orders GROUP BY status"
+    );
+
+    const statusMap: Record<string, number> = {};
+    statusCounts.forEach((row) => {
+      statusMap[row.status] = row.count;
+    });
+
+    res.json({
+      orderCount,
+      revenue,
+      statusCounts: {
+        pending: statusMap.pending || 0,
+        processing: statusMap.processing || 0,
+        completed: statusMap.completed || 0,
+        cancel: statusMap.cancel || 0,
+      },
+    });
+  } catch (err) {
+    console.error("Dashboard stats error:", err);
+    res.status(500).json({ error: "Lỗi truy vấn thống kê" });
+  }
+});
+
 app.post("/api/signup", async (req: Request, res: Response) => {
   const { username, email, password } = req.body;
 

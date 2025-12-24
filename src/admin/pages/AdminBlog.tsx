@@ -12,22 +12,18 @@ import {
   House,
 } from "lucide-react";
 
-interface voucherItem {
-  voucher_id: number;
+interface BlogItem {
+  blog_id: number;
   title: string;
-  description?: string | null;
+  description: string | null;
   image_url: string | null;
-  quantity: number;
-  start_date: string;
-  end_date: string;
-  status?: 1 | 0;
-  discount_type: string;
-  discount_value?: number;
+  post_date: string;
+  comments_count: number;
 }
 
-export default function AdminVoucher() {
-  const [vouchers, setVouchers] = useState<voucherItem[]>([]);
-  const [filteredVouchers, setFilteredVouchers] = useState<voucherItem[]>([]);
+export default function AdminBlog() {
+  const [blogs, setBlogs] = useState<BlogItem[]>([]);
+  const [filteredBlogs, setFilteredBlogs] = useState<BlogItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,105 +32,66 @@ export default function AdminVoucher() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
-  const [editingItem, setEditingItem] = useState<voucherItem | null>(null);
-  const [deletingItem, setDeletingItem] = useState<voucherItem | null>(null);
+  const [editingItem, setEditingItem] = useState<BlogItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<BlogItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [localStatuses, setLocalStatuses] = useState<{
-    [key: number]: boolean;
-  }>({});
 
   const itemsPerPage = 10;
 
-  const fetchVouchers = async () => {
+  const fetchBlogs = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("http://localhost:5000/api/voucher");
+      const res = await fetch("http://localhost:5000/api/blog");
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(
-          `HTTP ${res.status}: ${errText || "Không thể tải voucher"}`
+          `HTTP ${res.status}: ${errText || "Không thể tải bài viết"}`
         );
       }
-      const data = (await res.json()) as voucherItem[];
-      setVouchers(data);
-      setFilteredVouchers(data);
-      const initialStatuses: { [key: number]: boolean } = {};
-      data.forEach((voucher) => {
-        initialStatuses[voucher.voucher_id] = voucher.status === 1;
-      });
-      setLocalStatuses(initialStatuses);
+      const data = (await res.json()) as BlogItem[];
+      setBlogs(data);
+      setFilteredBlogs(data);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Lỗi kết nối server";
       setError(errorMessage);
-      console.error("Fetch voucher error:", err);
+      console.error("Fetch blogs error:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchVouchers();
+    fetchBlogs();
   }, []);
 
   useEffect(() => {
-    const filtered = vouchers.filter(
-      (voucher) =>
-        voucher.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (voucher.description
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ??
+    const filtered = blogs.filter(
+      (blog) =>
+        blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (blog.description?.toLowerCase().includes(searchTerm.toLowerCase()) ??
           false)
     );
-    setFilteredVouchers(filtered);
+    setFilteredBlogs(filtered);
     setCurrentPage(1);
-  }, [searchTerm, vouchers]);
+  }, [searchTerm, blogs]);
 
-  const totalPages = Math.ceil(filteredVouchers.length / itemsPerPage);
-  const paginatedVouchers = filteredVouchers.slice(
+  const totalPages = Math.ceil(filteredBlogs.length / itemsPerPage);
+  const paginatedBlogs = filteredBlogs.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  const handleToggleStatus = async (voucherId: number) => {
-    const currentStatus = localStatuses[voucherId];
-    const newStatus = !currentStatus;
-    setLocalStatuses((prev) => ({ ...prev, [voucherId]: newStatus }));
-
-    try {
-      const res = await fetch(
-        `http://localhost:5000/api/admin/voucher/${voucherId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus ? "1" : "0" }),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Cập nhật trạng thái thất bại");
-      }
-      setVouchers((prev) =>
-        prev.map((v) =>
-          v.voucher_id === voucherId ? { ...v, status: newStatus ? 1 : 0 } : v
-        )
-      );
-    } catch (err) {
-      setLocalStatuses((prev) => ({ ...prev, [voucherId]: currentStatus }));
-      alert(err instanceof Error ? err.message : "Lỗi cập nhật trạng thái");
-    }
-  };
-
   const toggleSelectAll = () => {
     if (
-      selectedItems.length === paginatedVouchers.length &&
-      paginatedVouchers.length > 0
+      selectedItems.length === paginatedBlogs.length &&
+      paginatedBlogs.length > 0
     ) {
       setSelectedItems([]);
     } else {
-      setSelectedItems(paginatedVouchers.map((b) => b.voucher_id));
+      setSelectedItems(paginatedBlogs.map((b) => b.blog_id));
     }
   };
 
@@ -166,26 +123,26 @@ export default function AdminVoucher() {
     const formData = new FormData(e.currentTarget);
 
     if (!formData.get("title")?.toString().trim()) {
-      alert("Vui lòng nhập tên voucher!");
+      alert("Vui lòng nhập tiêu đề bài viết!");
       return;
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/admin/voucher/add", {
+      const res = await fetch("http://localhost:5000/api/admin/blog/add", {
         method: "POST",
         body: formData,
       });
       const data = await res.json();
       if (!res.ok)
         throw new Error(
-          (data as { error?: string }).error || "Thêm voucher thất bại"
+          (data as { error?: string }).error || "Thêm bài viết thất bại"
         );
-      alert("Thêm voucher thành công!");
+      alert("Thêm bài viết thành công!");
       closeModals();
-      fetchVouchers();
+      fetchBlogs();
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Lỗi khi thêm voucher";
+        err instanceof Error ? err.message : "Lỗi khi thêm bài viết";
       alert(message);
     }
   };
@@ -196,13 +153,13 @@ export default function AdminVoucher() {
 
     const formData = new FormData(e.currentTarget);
     if (!formData.get("title")?.toString().trim()) {
-      alert("Vui lòng nhập tên voucher!");
+      alert("Vui lòng nhập tiêu đề!");
       return;
     }
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/voucher/${editingItem.voucher_id}`,
+        `http://localhost:5000/api/admin/blog/${editingItem.blog_id}`,
         {
           method: "PUT",
           body: formData,
@@ -213,9 +170,9 @@ export default function AdminVoucher() {
         throw new Error(
           (data as { error?: string }).error || "Cập nhật thất bại"
         );
-      alert("Cập nhật voucher thành công!");
+      alert("Cập nhật bài viết thành công!");
       closeModals();
-      fetchVouchers();
+      fetchBlogs();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Lỗi khi cập nhật";
       alert(message);
@@ -226,7 +183,7 @@ export default function AdminVoucher() {
     if (!deletingItem) return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/voucher/${deletingItem.voucher_id}`,
+        `http://localhost:5000/api/admin/blog/${deletingItem.blog_id}`,
         {
           method: "DELETE",
         }
@@ -235,80 +192,35 @@ export default function AdminVoucher() {
         const errText = await res.text();
         throw new Error(errText || "Xóa thất bại");
       }
-      alert("Xóa voucher thành công!");
+      alert("Xóa bài viết thành công!");
       closeModals();
-      fetchVouchers();
+      fetchBlogs();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Lỗi khi xóa";
       alert(message);
     }
   };
 
-  const handleBulkStatus = async (newStatus: 0 | 1) => {
-    if (selectedItems.length === 0) return;
-
-    const action = newStatus === 1 ? "kích hoạt" : "hủy kích hoạt";
-    if (
-      !confirm(
-        `Bạn có chắc muốn ${action} ${selectedItems.length} voucher này không?`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const res = await fetch(
-        "http://localhost:5000/api/admin/voucher/bulk-status",
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ids: selectedItems,
-            status: newStatus,
-          }),
-        }
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Cập nhật thất bại");
-      }
-
-      alert(`Đã ${action} thành công ${selectedItems.length} voucher!`);
-      setSelectedItems([]);
-      fetchVouchers();
-    } catch (err) {
-      console.error("Bulk status error:", err);
-      alert("Lỗi khi cập nhật trạng thái. Vui lòng thử lại!");
-    }
-  };
-
   const handleBulkDelete = async () => {
     if (selectedItems.length === 0) return;
-
-    if (!confirm(`Xóa ${selectedItems.length} voucher đã chọn?`)) return;
-
     try {
       const res = await fetch(
-        "http://localhost:5000/api/admin/voucher/bulk-delete",
+        "http://localhost:5000/api/admin/blog/bulk-delete",
         {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ids: selectedItems }),
         }
       );
-
       const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error || "Xóa thất bại");
-
+      if (!res.ok)
+        throw new Error(
+          (data as { error?: string }).error || "Xóa hàng loạt thất bại"
+        );
       alert(data.message || "Xóa thành công!");
       setSelectedItems([]);
       setShowBulkDeleteModal(false);
-      fetchVouchers();
+      fetchBlogs();
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Lỗi khi xóa hàng loạt";
@@ -349,7 +261,7 @@ export default function AdminVoucher() {
               </Link>
             </li>
             <li>
-              <span className="mx-1">/</span> Quản lý voucher
+              <span className="mx-1">/</span> Quản lý bài viết
             </li>
             <li>
               <span className="mx-1">/</span>{" "}
@@ -361,7 +273,7 @@ export default function AdminVoucher() {
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           <input
             type="text"
-            placeholder="Tìm kiếm voucher..."
+            placeholder="Tìm kiếm bài viết..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full sm:max-w-xs px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
@@ -389,7 +301,7 @@ export default function AdminVoucher() {
         <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-cyan-900">
-              Đã chọn <strong>{selectedItems.length}</strong> voucher
+              Đã chọn <strong>{selectedItems.length}</strong> bài viết
             </span>
             <button
               onClick={() => setSelectedItems([])}
@@ -398,56 +310,12 @@ export default function AdminVoucher() {
               Bỏ chọn tất cả
             </button>
           </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleBulkStatus(1)}
-              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition flex items-center gap-2"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Kích hoạt
-            </button>
-
-            <button
-              onClick={() => handleBulkStatus(0)}
-              className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition flex items-center gap-2"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m0 12.728a9 9 0 0112.728-12.728m-12.728 12.728L18.364 5.636"
-                />
-              </svg>
-              Hủy kích hoạt
-            </button>
-
-            <button
-              onClick={() => setShowBulkDeleteModal(true)}
-              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition flex items-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Xóa ({selectedItems.length})
-            </button>
-          </div>
+          <button
+            onClick={() => setShowBulkDeleteModal(true)}
+            className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 flex items-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" /> Xóa ({selectedItems.length})
+          </button>
         </div>
       )}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -459,8 +327,8 @@ export default function AdminVoucher() {
                   <input
                     type="checkbox"
                     checked={
-                      selectedItems.length === paginatedVouchers.length &&
-                      paginatedVouchers.length > 0
+                      selectedItems.length === paginatedBlogs.length &&
+                      paginatedBlogs.length > 0
                     }
                     onChange={toggleSelectAll}
                     className="w-4 h-4 text-cyan-600 rounded border-gray-300"
@@ -470,22 +338,13 @@ export default function AdminVoucher() {
                   ID
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  Tên mã
+                  Tiêu đề
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  Ngày bắt đầu
+                  Ngày đăng
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  Ngày kết thúc
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  Số lượng
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  Số tiền giảm
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  Trạng thái
+                  Bình luận
                 </th>
                 <th className="pr-16 py-3 text-right text-xs font-medium text-gray-500">
                   Hành động
@@ -493,75 +352,54 @@ export default function AdminVoucher() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {paginatedVouchers.map((voucher) => (
-                <tr key={voucher.voucher_id} className="hover:bg-gray-50">
+              {paginatedBlogs.map((blog) => (
+                <tr key={blog.blog_id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
-                      checked={selectedItems.includes(voucher.voucher_id)}
-                      onChange={() => toggleSelectItem(voucher.voucher_id)}
+                      checked={selectedItems.includes(blog.blog_id)}
+                      onChange={() => toggleSelectItem(blog.blog_id)}
                       className="w-4 h-4 text-cyan-600 rounded border-gray-300"
                     />
                   </td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                    #{voucher.voucher_id}
+                    #{blog.blog_id}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-20 h-20 rounded bg-gray-200 border-2 border-dashed border-gray-400 overflow-hidden">
-                        {voucher.image_url ? (
+                        {blog.image_url ? (
                           <img
-                            src={`${voucher.image_url}`}
-                            alt={voucher.title}
+                            src={`${blog.image_url}`}
+                            alt={blog.title}
                             className="w-full h-full object-cover"
                           />
                         ) : null}
                       </div>
                       <div>
                         <div className="font-medium text-gray-900">
-                          {voucher.title}
+                          {blog.title}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {voucher.description
-                            ? voucher.description.slice(0, 80)
+                          {blog.description
+                            ? blog.description.slice(0, 80) + "..."
                             : "Không có mô tả"}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
-                    {new Date(voucher.start_date).toLocaleDateString("vi-VN")}
+                    {new Date(blog.post_date).toLocaleDateString("vi-VN")}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
-                    {new Date(voucher.end_date).toLocaleDateString("vi-VN")}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {voucher.quantity}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    - {voucher.discount_value}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="relative inline-block w-11 h-5">
-                      <input
-                        checked={localStatuses[voucher.voucher_id] || false}
-                        id={`switch-${voucher.voucher_id}`}
-                        type="checkbox"
-                        onChange={() => handleToggleStatus(voucher.voucher_id)}
-                        className="peer appearance-none w-11 h-5 bg-slate-100 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
-                      />
-                      <label
-                        htmlFor={`switch-${voucher.voucher_id}`}
-                        className="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-slate-800 cursor-pointer"
-                      ></label>
-                    </div>
+                    {blog.comments_count}
                   </td>
                   <td className="px-4 py-3 text-right space-x-1">
                     <button
                       onClick={() => {
-                        setEditingItem(voucher);
+                        setEditingItem(blog);
                         setImagePreview(
-                          voucher.image_url ? `${voucher.image_url}` : ""
+                          blog.image_url ? `${blog.image_url}` : ""
                         );
                         setShowEditModal(true);
                       }}
@@ -571,7 +409,7 @@ export default function AdminVoucher() {
                     </button>
                     <button
                       onClick={() => {
-                        setDeletingItem(voucher);
+                        setDeletingItem(blog);
                         setShowDeleteModal(true);
                       }}
                       className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700"
@@ -589,9 +427,9 @@ export default function AdminVoucher() {
             Hiển thị{" "}
             <strong>
               {(currentPage - 1) * itemsPerPage + 1}-
-              {Math.min(currentPage * itemsPerPage, filteredVouchers.length)}
+              {Math.min(currentPage * itemsPerPage, filteredBlogs.length)}
             </strong>{" "}
-            trong <strong>{filteredVouchers.length}</strong>
+            trong <strong>{filteredBlogs.length}</strong>
           </span>
           <div className="flex gap-1 mt-2 sm:mt-0">
             <button
@@ -616,7 +454,7 @@ export default function AdminVoucher() {
           <div className="relative w-full max-w-2xl p-3">
             <div className="bg-white rounded-lg shadow-lg">
               <div className="flex items-start justify-between p-4 border-b">
-                <h3 className="text-xl font-semibold">Thêm voucher</h3>
+                <h3 className="text-xl font-semibold">Thêm bài viết mới</h3>
                 <button
                   onClick={closeModals}
                   className="text-gray-400 hover:bg-gray-200 hover:text-gray-900 rounded-lg p-1.5"
@@ -628,7 +466,7 @@ export default function AdminVoucher() {
                 <div className="p-6 space-y-6 max-h-[600px] overflow-y-auto">
                   <div>
                     <label className="text-sm font-medium text-gray-900 block mb-2">
-                      Tên voucher
+                      Tiêu đề bài viết
                     </label>
                     <input
                       name="title"
@@ -643,7 +481,7 @@ export default function AdminVoucher() {
                     </label>
                     <textarea
                       name="description"
-                      rows={3}
+                      rows={6}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
                     ></textarea>
                   </div>
@@ -651,7 +489,7 @@ export default function AdminVoucher() {
                     <label className="text-sm font-medium text-gray-900 block mb-2">
                       Hình ảnh
                     </label>
-                    <div className="w-full h-52 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50 relative">
+                    <div className="w-full h-80 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50 relative">
                       {imagePreview ? (
                         <>
                           <img
@@ -694,94 +532,13 @@ export default function AdminVoucher() {
                       className="mt-2 block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-600 file:text-white hover:file:bg-cyan-700"
                     />
                   </div>
-                  <div className="col-span-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 block mb-1">
-                          Ngày bắt đầu
-                        </label>
-                        <input
-                          name="start_date"
-                          type="date"
-                          required
-                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 block mb-1">
-                          Ngày kết thúc
-                        </label>
-                        <input
-                          name="end_date"
-                          type="date"
-                          required
-                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 block mb-1">
-                          Số lượng
-                        </label>
-                        <input
-                          name="quantity"
-                          type="number"
-                          min="1"
-                          required
-                          placeholder="1"
-                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 block mb-1">
-                          Loại áp dụng giảm giá
-                        </label>
-                        <select
-                          name="discount_type"
-                          required
-                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                        >
-                          <option value="">Chọn loại giảm giá</option>
-                          <option value="percent">percent</option>
-                          <option value="fixed">fixed</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 block mb-1">
-                          Số tiển giảm
-                        </label>
-                        <input
-                          name="discount_value"
-                          type="number"
-                          min="1"
-                          required
-                          placeholder="0.00"
-                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center">
-                    <input
-                      id="status"
-                      name="status"
-                      type="checkbox"
-                      defaultChecked
-                      className="w-4 h-4 text-cyan-600 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500 focus:ring-2"
-                    />
-                    <label
-                      htmlFor="status"
-                      className="ml-2 text-sm font-medium text-gray-900"
-                    >
-                      Kích hoạt
-                    </label>
-                  </div>
                 </div>
                 <div className="flex justify-end gap-3 p-4 border-t">
                   <button
                     type="submit"
                     className="px-6 py-2.5 bg-cyan-600 text-white font-medium rounded-lg hover:bg-cyan-700"
                   >
-                    Thêm voucher
+                    Thêm bài viết
                   </button>
                   <button
                     type="button"
@@ -801,7 +558,7 @@ export default function AdminVoucher() {
           <div className="relative w-full max-w-2xl p-3">
             <div className="bg-white rounded-lg shadow-lg">
               <div className="flex items-start justify-between p-4 border-b">
-                <h3 className="text-xl font-semibold">Chỉnh sửa voucher</h3>
+                <h3 className="text-xl font-semibold">Chỉnh sửa bài viết</h3>
                 <button
                   onClick={closeModals}
                   className="text-gray-400 hover:bg-gray-200 hover:text-gray-900 rounded-lg p-1.5"
@@ -813,7 +570,7 @@ export default function AdminVoucher() {
                 <div className="p-6 space-y-6 max-h-[600px] overflow-y-auto">
                   <div>
                     <label className="text-sm font-medium text-gray-900 block mb-2">
-                      Tên voucher
+                      Tiêu đề
                     </label>
                     <input
                       name="title"
@@ -825,24 +582,24 @@ export default function AdminVoucher() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-900 block mb-2">
-                      Mô tả / Nội dung ngắn
+                      Mô tả
                     </label>
                     <textarea
                       name="description"
-                      rows={3}
+                      rows={6}
                       defaultValue={editingItem.description || ""}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500"
                     ></textarea>
                   </div>
                   <div className="col-span-6">
                     <label className="text-sm font-medium text-gray-900 block mb-2">
-                      Hình ảnh
+                      Hình ảnh món ăn
                     </label>
-                    <div className="w-full h-52 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50 relative">
+                    <div className="w-full h-96 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50 relative">
                       {imagePreview || editingItem.image_url ? (
                         <>
                           <img
-                            src={imagePreview || `/${editingItem.image_url}`}
+                            src={imagePreview || `${editingItem.image_url}`}
                             alt="Preview"
                             className="w-full h-full object-cover"
                           />
@@ -879,6 +636,7 @@ export default function AdminVoucher() {
                         </div>
                       )}
                     </div>
+
                     <input
                       type="file"
                       name="image"
@@ -889,114 +647,6 @@ export default function AdminVoucher() {
                     <p className="mt-1 text-xs text-gray-500">
                       PNG, JPG, JPEG (tối đa 5MB)
                     </p>
-                  </div>
-                  <div className="col-span-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 block mb-1">
-                          Ngày bắt đầu
-                        </label>
-                        <input
-                          name="start_date"
-                          type="date"
-                          defaultValue={
-                            editingItem.start_date
-                              ? new Date(editingItem.start_date)
-                                  .toISOString()
-                                  .split("T")[0]
-                              : ""
-                          }
-                          required
-                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 block mb-1">
-                          Ngày kết thúc
-                        </label>
-                        <input
-                          name="end_date"
-                          type="date"
-                          defaultValue={
-                            editingItem.end_date
-                              ? new Date(editingItem.end_date)
-                                  .toISOString()
-                                  .split("T")[0]
-                              : ""
-                          }
-                          required
-                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 block mb-1">
-                          Số lượng
-                        </label>
-                        <input
-                          name="quantity"
-                          type="number"
-                          min="1"
-                          defaultValue={editingItem.quantity}
-                          required
-                          placeholder="0"
-                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 block mb-1">
-                          Loại áp dụng giảm giá
-                        </label>
-                        <select
-                          name="discount_type"
-                          defaultValue={editingItem.discount_type}
-                          required
-                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                        >
-                          <option value="percent">percent</option>
-                          <option value="fixed">fixed</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 block mb-1">
-                          Số tiển giảm
-                        </label>
-                        <input
-                          name="discount_value"
-                          type="number"
-                          defaultValue={editingItem.discount_value}
-                          min="1"
-                          required
-                          placeholder="0.00"
-                          className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center">
-                    <input
-                      type="hidden"
-                      name="status"
-                      id="status_hidden"
-                      value="0"
-                    />
-                    <input
-                      id="status_edit"
-                      type="checkbox"
-                      defaultChecked={editingItem.status === 1}
-                      onChange={(e) => {
-                        const hidden = document.getElementById(
-                          "status_hidden"
-                        ) as HTMLInputElement;
-                        if (hidden) hidden.value = e.target.checked ? "1" : "0";
-                      }}
-                      className="w-4 h-4 text-cyan-600 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500 focus:ring-2"
-                    />
-                    <label
-                      htmlFor="status_edit"
-                      className="ml-2 text-sm font-medium text-gray-900"
-                    >
-                      Kích hoạt
-                    </label>
                   </div>
                 </div>
                 <div className="flex justify-end gap-3 p-4 border-t">
@@ -1034,7 +684,7 @@ export default function AdminVoucher() {
                 </svg>
               </div>
               <h3 className="mt-5 text-xl font-normal text-gray-700">
-                Bạn có chắc muốn xóa voucher{" "}
+                Bạn có chắc muốn xóa bài viết{" "}
                 <strong>"{deletingItem.title}"</strong>?
               </h3>
               <div className="mt-6 flex justify-center gap-4">
@@ -1071,7 +721,7 @@ export default function AdminVoucher() {
                 </svg>
               </div>
               <h3 className="mt-5 text-xl font-normal text-gray-700">
-                Xóa <strong>{selectedItems.length}</strong> voucher đã chọn?
+                Xóa <strong>{selectedItems.length}</strong> bài viết đã chọn?
               </h3>
               <div className="mt-6 flex justify-center gap-4">
                 <button
