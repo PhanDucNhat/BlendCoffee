@@ -4,7 +4,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Download,
   AlertCircle,
   Edit,
   Trash2,
@@ -288,12 +287,6 @@ export default function AdminBlog() {
             >
               <Plus className="w-4 h-4" /> Thêm mới
             </button>
-            <a
-              href="#"
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
-            >
-              <Download className="w-4 h-4" /> Xuất
-            </a>
           </div>
         </div>
       </div>

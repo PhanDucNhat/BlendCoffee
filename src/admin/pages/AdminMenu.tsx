@@ -11,6 +11,7 @@ import {
   X,
   House,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface MenuItem {
   menu_id: number;
@@ -380,6 +381,30 @@ export default function AdminMenu() {
     await fetchData();
   };
 
+  const handleExportToExcel = () => {
+    const data = menuItems.map((item) => ({
+      ID: item.menu_id,
+      "Tên món": item.name,
+      "Mô tả": item.description || "",
+      "Danh mục": item.category_name,
+      "Giá size nhỏ (đ)": item.prices.Small || "-",
+      "Giá size trung bình (đ)": item.prices.Medium || "-",
+      "Giá size lớn (đ)": item.prices.Large || "-",
+      "Trạng thái": item.status === 1 ? "Kích hoạt" : "Tắt",
+      "URL ảnh": item.image_url ? `http://localhost:5000${item.image_url}` : "",
+    }));
+
+    if (data.length === 0) {
+      alert("Không có dữ liệu để xuất!");
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Menu");
+    XLSX.writeFile(workbook, "Menu_BlendCoffee.xlsx");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -439,12 +464,12 @@ export default function AdminMenu() {
             >
               <Plus className="w-4 h-4" /> Thêm mới
             </button>
-            <a
-              href="#"
+            <button
+              onClick={handleExportToExcel}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
             >
-              <Download className="w-4 h-4" /> Xuất
-            </a>
+              <Download className="w-4 h-4" /> Xuất Excel
+            </button>
           </div>
         </div>
       </div>
@@ -547,9 +572,9 @@ export default function AdminMenu() {
                       onChange={(e) => setSelectedSize(e.target.value)}
                       className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-cyan-500 focus:border-cyan-500"
                     >
-                      <option value="Small">Small</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Large">Large</option>
+                      <option value="Small">Nhỏ</option>
+                      <option value="Medium">Trung bình</option>
+                      <option value="Large">Lớn</option>
                     </select>
                   </div>
                 </th>
@@ -601,7 +626,7 @@ export default function AdminMenu() {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     {item.prices[selectedSize] !== undefined
-                      ? `${item.prices[selectedSize].toLocaleString("vi-VN")} đ`
+                      ? `${item.prices[selectedSize]} đ`
                       : "-"}
                   </td>
                   <td className="px-4 py-3">
@@ -796,43 +821,43 @@ export default function AdminMenu() {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <label className="text-xs font-medium text-gray-700 block mb-1">
-                            Small
+                            Nhỏ
                           </label>
                           <input
                             name="price_small"
                             type="number"
-                            step="0.01"
+                            step="0.500"
                             min="0"
                             required
-                            placeholder="0.00"
+                            placeholder="0.000"
                             className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                           />
                         </div>
                         <div>
                           <label className="text-xs font-medium text-gray-700 block mb-1">
-                            Medium
+                            Trung bình
                           </label>
                           <input
                             name="price_medium"
                             type="number"
-                            step="0.01"
+                            step="0.500"
                             min="0"
                             required
-                            placeholder="0.00"
+                            placeholder="0.000"
                             className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                           />
                         </div>
                         <div>
                           <label className="text-xs font-medium text-gray-700 block mb-1">
-                            Large
+                            Lớn
                           </label>
                           <input
                             name="price_large"
                             type="number"
-                            step="0.01"
+                            step="0.500"
                             min="0"
                             required
-                            placeholder="0.00"
+                            placeholder="0.000"
                             className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                           />
                         </div>
@@ -1016,10 +1041,10 @@ export default function AdminMenu() {
                             <input
                               name={`price_${size.toLowerCase()}`}
                               type="number"
-                              step="0.01"
+                              step="0.500"
                               min="0"
                               defaultValue={editingItem.prices[size] || ""}
-                              placeholder="0.00"
+                              placeholder="0.000"
                               className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                             />
                           </div>

@@ -5,7 +5,7 @@ import bcrypt from "bcrypt"; //mã hóa mk
 import jwt from "jsonwebtoken"; //xác thực users
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { PoolConnection } from "mysql2/promise";
-
+import { startOfDay, endOfDay } from "date-fns";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -139,6 +139,30 @@ interface OrderStatusCount extends RowDataPacket {
   count: number;
 }
 
+interface CategoryStat extends RowDataPacket {
+  label: string;
+  order_count: number;
+}
+
+interface TopUserStat extends RowDataPacket {
+  username: string | null;
+  email: string | null;
+  order_count: number;
+  total_spent: number;
+}
+
+interface TopProductStat extends RowDataPacket {
+  name: string;
+  image_url: string | null;
+  sold_count: number;
+  revenue: number;
+}
+
+interface SummaryStats extends RowDataPacket {
+  count: number
+  revenue: number | null;
+}
+
 const fetchCartDetails = async (conn: PoolConnection, userId: number) => {
   const [cartRows] = await conn.query<RowDataPacket[]>(
     "SELECT cart_id FROM cart WHERE id = ?",
@@ -208,15 +232,6 @@ interface AuthRequest extends Request {
     role: string;
   };
 }
-
-// interface BlogItem extends RowDataPacket {
-//   blog_id: number;
-//   title: string;
-//   description: string | null;
-//   image_url: string | null;
-//   post_date: string;
-//   comments_count: number;
-// }
 
 const app = express();
 app.use(express.json({ limit: "10mb" }));
@@ -2182,6 +2197,141 @@ app.get("/api/admin/dashboard-stats", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Dashboard stats error:", err);
     res.status(500).json({ error: "Lỗi truy vấn thống kê" });
+  }
+});
+
+app.get("/api/admin/statistics", async (req: Request, res: Response) => {
+  const { start_date, end_date, employee_id } = req.query as {
+    start_date?: string;
+    end_date?: string;
+    employee_id?: string;
+  };
+
+  if (!start_date || !end_date) {
+    return res.status(400).json({ message: "Thiếu tham số start_date và end_date" });
+  }
+
+  let startDate: Date;
+  let endDate: Date;
+
+  try {
+    startDate = startOfDay(new Date(start_date));
+    endDate = endOfDay(new Date(end_date));
+  } catch {
+    return res.status(400).json({ message: "Định dạng ngày không hợp lệ (YYYY-MM-DD)" });
+  }
+
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return res.status(400).json({ message: "Ngày không hợp lệ" });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    const whereConditions: string[] = ["o.created_at >= ? AND o.created_at <= ?"];
+    const queryParams: (Date | number)[] = [startDate, endDate];
+
+    if (employee_id && !isNaN(Number(employee_id))) {
+      whereConditions.push("o.id = ?");
+      queryParams.push(Number(employee_id));
+    }
+
+    const whereClause =
+      whereConditions.length > 0 ? "WHERE " + whereConditions.join(" AND ") : "";
+
+    const [orderCountRows] = await conn.query<SummaryStats[]>(
+      `SELECT COUNT(*) as count FROM orders o ${whereClause}`,
+      queryParams
+    );
+    const orderCount = orderCountRows[0].count;
+
+    const [revenueRows] = await conn.query<SummaryStats[]>(
+      `SELECT COALESCE(SUM(o.total), 0) as revenue FROM orders o ${whereClause}`,
+      queryParams
+    );
+    const revenue = Number(revenueRows[0].revenue ?? 0);
+
+    const [productCountRows] = await conn.query<SummaryStats[]>(
+      `SELECT COALESCE(SUM(oi.quantity), 0) as count 
+       FROM order_items oi 
+       JOIN orders o ON oi.order_id = o.order_id 
+       ${whereClause}`,
+      queryParams
+    );
+    const productCount = Number(productCountRows[0].count ?? 0);
+
+    const [categoryStats] = await conn.query<CategoryStat[]>(
+      `SELECT 
+         COALESCE(c.category_name, 'Khác') AS label,
+         COALESCE(SUM(oi.quantity), 0) AS order_count
+       FROM order_items oi
+       JOIN menu m ON oi.menu_id = m.menu_id
+       JOIN menu_category c ON m.category_id = c.category_id
+       JOIN orders o ON oi.order_id = o.order_id
+       ${whereClause}
+       GROUP BY c.category_id, c.category_name
+       ORDER BY order_count DESC`,
+      queryParams
+    );
+
+    const [topUsers] = await conn.query<TopUserStat[]>(
+      `SELECT 
+         COALESCE(u.username, 'Khách lẻ') AS username,
+         u.email,
+         COUNT(o.order_id) AS order_count,
+         COALESCE(SUM(o.total), 0) AS total_spent
+       FROM orders o
+       LEFT JOIN users u ON o.id = u.id
+       ${whereClause}
+       GROUP BY o.id, u.username, u.email
+       ORDER BY order_count DESC
+       LIMIT 5`,
+      queryParams
+    );
+
+    const [topProducts] = await conn.query<TopProductStat[]>(
+      `SELECT 
+         m.name,
+         m.image_url,
+         SUM(oi.quantity) AS sold_count,
+         SUM(oi.quantity * oi.price) AS revenue
+       FROM order_items oi
+       JOIN menu m ON oi.menu_id = m.menu_id
+       JOIN orders o ON oi.order_id = o.order_id
+       ${whereClause}
+       GROUP BY m.menu_id, m.name, m.image_url
+       ORDER BY sold_count DESC
+       LIMIT 5`,
+      queryParams
+    );
+
+    res.json({
+      summary: {
+        orderCount,
+        productCount,
+        revenue,
+      },
+      categoryChart: categoryStats.map(row => ({
+        label: row.label,
+        order_count: Number(row.order_count),
+      })),
+      topUsers: topUsers.map(row => ({
+        username: row.username,
+        email: row.email,
+        order_count: Number(row.order_count),
+        total_spent: Number(row.total_spent),
+      })),
+      topProducts: topProducts.map(row => ({
+        name: row.name,
+        image_url: row.image_url || "/images/placeholder.jpg",
+        sold_count: Number(row.sold_count),
+        revenue: Number(row.revenue),
+      })),
+    });
+  } catch (error) {
+    console.error("Lỗi lấy thống kê:", error);
+    res.status(500).json({ message: "Lỗi server khi lấy thống kê" });
+  } finally {
+    conn.release();
   }
 });
 

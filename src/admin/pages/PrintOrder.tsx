@@ -159,7 +159,7 @@ const printOrder: React.FC<PrintOrderProps> = ({ order }) => {
                                 {item.name}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {item.price.toFixed(2)}đ
+                                {item.price.toFixed(3)}đ
                               </div>
                             </div>
                           </div>
@@ -171,7 +171,7 @@ const printOrder: React.FC<PrintOrderProps> = ({ order }) => {
                           {item.quantity}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {totalPrice.toFixed(2)}đ
+                          {totalPrice.toFixed(3)}đ
                         </td>
                       </tr>
                     );
@@ -185,23 +185,23 @@ const printOrder: React.FC<PrintOrderProps> = ({ order }) => {
                 <div className="space-y-3 text-sm">
                   <div className="grid grid-cols-2 gap-1 max-w-xs ml-auto">
                     <span className="text-black text-right">Thành tiền:</span>
-                    <span className="text-right">{subtotal.toFixed(2)}đ</span>
+                    <span className="text-right">{subtotal.toFixed(3)}đ</span>
                     <span className="text-black text-right">Vận chuyển:</span>
                     <span className="text-right">
                       {deliveryFee === 0
-                        ? "0.00đ"
-                        : `${deliveryFee.toFixed(2)}đ`}
+                        ? "Miễn phí"
+                        : `${deliveryFee.toFixed(3)}đ`}
                     </span>
                     <span className="text-black text-right">Giảm giá:</span>
                     <span className="text-right">
-                      {discount === 0 ? "0.00đ" : `-${discount.toFixed(2)}đ`}
+                      {discount === 0 ? "0đ" : `-${discount.toFixed(3)}đ`}
                     </span>
                   </div>
                   <hr className="border-gray-600 max-w-80 ml-auto" />
                   <div className="grid grid-cols-2 max-w-xs ml-auto text-lg font-bold">
                     <span className="text-right">Tổng tiền:</span>
                     <span className="text-right drop-shadow glow">
-                      {total.toFixed(2)}đ
+                      {total.toFixed(3)}đ
                     </span>
                   </div>
                 </div>

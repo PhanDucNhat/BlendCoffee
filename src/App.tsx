@@ -107,7 +107,6 @@ const AppContent: React.FC = () => {
         <Route path="/order" element={<Order />} />
         <Route path="/changepassword" element={<Change />} />
         <Route path="/addresses" element={<Address />} />
-        {/* <Route path="/singleproduct" element={<SingleProduct />} /> */}
         <Route path="/singleproduct/:id" element={<SingleProduct />} />
         <Route path="/login" element={<Login />} />
         <Route

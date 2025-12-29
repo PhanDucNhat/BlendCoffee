@@ -11,6 +11,7 @@ import {
   X,
   House,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface voucherItem {
   voucher_id: number;
@@ -316,6 +317,37 @@ export default function AdminVoucher() {
     }
   };
 
+  const handleExportToExcel = () => {
+    const dataToExport = filteredVouchers.map((voucher) => ({
+      ID: voucher.voucher_id,
+      "Tên mã": voucher.title,
+      "Mô tả": voucher.description || "Không có mô tả",
+      "Loại giảm giá":
+        voucher.discount_type === "percent"
+          ? "Phần trăm (%)"
+          : "Số tiền cố định (đ)",
+      "Giá trị giảm": voucher.discount_value ?? "-",
+      "Số lượng": voucher.quantity,
+      "Ngày bắt đầu": new Date(voucher.start_date).toLocaleDateString("vi-VN"),
+      "Ngày kết thúc": new Date(voucher.end_date).toLocaleDateString("vi-VN"),
+      "Trạng thái": voucher.status === 1 ? "Kích hoạt" : "Tắt",
+      "URL ảnh": voucher.image_url
+        ? `http://localhost:5000${voucher.image_url}`
+        : "-",
+    }));
+
+    if (dataToExport.length === 0) {
+      alert("Không có dữ liệu voucher để xuất!");
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách voucher");
+    const today = new Date().toISOString().slice(0, 10); // 2025-12-26
+    XLSX.writeFile(workbook, `Voucher_BlendCoffee_${today}.xlsx`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -376,12 +408,12 @@ export default function AdminVoucher() {
             >
               <Plus className="w-4 h-4" /> Thêm mới
             </button>
-            <a
-              href="#"
+            <button
+              onClick={handleExportToExcel}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
             >
-              <Download className="w-4 h-4" /> Xuất
-            </a>
+              <Download className="w-4 h-4" /> Xuất Excel
+            </button>
           </div>
         </div>
       </div>
@@ -752,9 +784,10 @@ export default function AdminVoucher() {
                         <input
                           name="discount_value"
                           type="number"
+                          step="0.500"
                           min="1"
                           required
-                          placeholder="0.00"
+                          placeholder="1.000"
                           className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                         />
                       </div>
@@ -964,9 +997,10 @@ export default function AdminVoucher() {
                           name="discount_value"
                           type="number"
                           defaultValue={editingItem.discount_value}
+                          step="0.500"
                           min="1"
                           required
-                          placeholder="0.00"
+                          placeholder="1.000"
                           className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                         />
                       </div>

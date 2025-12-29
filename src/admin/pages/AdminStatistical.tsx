@@ -12,7 +12,7 @@ import {
 } from "chart.js";
 import type { ChartOptions } from "chart.js";
 import { DateRangePicker, createStaticRanges } from "react-date-range";
-import type { RangeKeyDict } from "react-date-range";
+import type { Range, RangeKeyDict } from "react-date-range";
 import { vi } from "date-fns/locale";
 import {
   format,
@@ -30,6 +30,7 @@ import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
 import { FaChevronDown } from "react-icons/fa";
 import { House } from "lucide-react";
+import axios from "axios";
 
 ChartJS.register(
   CategoryScale,
@@ -40,55 +41,29 @@ ChartJS.register(
   Legend
 );
 
-const data = {
-  labels: ["Main Dish", "Coffee", "Dessert", "Drinks"],
-  datasets: [
-    {
-      label: "Số đơn hàng",
-      data: [200, 90, 130, 20],
-      backgroundColor: [
-        "rgba(54, 162, 235, 0.6)",
-        "rgba(255, 99, 132, 0.6)",
-        "rgba(123, 55, 132, 0.6)",
-        "rgba(75, 211, 132, 0.6)",
-      ],
-      borderRadius: 6,
-    },
-  ],
-};
-
-const options: ChartOptions<"bar"> = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: false,
-    },
-    tooltip: {
-      callbacks: {
-        label: (context) => ` ${context.parsed.y} đơn`,
-      },
-    },
-  },
-  scales: {
-    x: {
-      title: {
-        display: true,
-        text: "Danh mục",
-      },
-    },
-    y: {
-      beginAtZero: true,
-      title: {
-        display: true,
-        text: "Số đơn hàng",
-      },
-    },
-  },
-};
+interface StatisticsData {
+  summary: {
+    orderCount: number;
+    productCount: number;
+    revenue: number;
+  };
+  categoryChart: { label: string; order_count: number }[];
+  topUsers: {
+    username: string;
+    email?: string | null;
+    order_count: number;
+    total_spent: number;
+  }[];
+  topProducts: {
+    name: string;
+    image_url: string;
+    sold_count: number;
+    revenue: number;
+  }[];
+}
 
 const AdminStatistical: React.FC = () => {
-  const [dateRange, setDateRange] = React.useState([
+  const [dateRange, setDateRange] = React.useState<Range[]>([
     {
       startDate: new Date(),
       endDate: new Date(),
@@ -96,9 +71,36 @@ const AdminStatistical: React.FC = () => {
     },
   ]);
 
-  const [tempRange, setTempRange] = React.useState(dateRange);
+  const [tempRange, setTempRange] = React.useState<Range[]>(dateRange);
   const [isDatePickerOpen, setIsDatePickerOpen] = React.useState(false);
+  const [stats, setStats] = React.useState<StatisticsData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [employeeId, setEmployeeId] = React.useState<string>("");
+
   const datePickerRef = React.useRef<HTMLDivElement | null>(null);
+
+  const fetchStatistics = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get<StatisticsData>("/api/admin/statistics", {
+        params: {
+          start_date: format(dateRange[0].startDate!, "yyyy-MM-dd"),
+          end_date: format(dateRange[0].endDate!, "yyyy-MM-dd"),
+          employee_id: employeeId || undefined,
+        },
+      });
+      setStats(res.data);
+    } catch (err) {
+      console.error("Lỗi tải thống kê:", err);
+      alert("Không thể tải dữ liệu thống kê");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchStatistics();
+  }, [dateRange, employeeId]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -110,17 +112,14 @@ const AdminStatistical: React.FC = () => {
         setIsDatePickerOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isDatePickerOpen]);
 
   const formattedRange = `${format(
-    dateRange[0].startDate,
+    dateRange[0].startDate!,
     "dd/MM/yyyy"
-  )} - ${format(dateRange[0].endDate, "dd/MM/yyyy")}`;
+  )} - ${format(dateRange[0].endDate!, "dd/MM/yyyy")}`;
 
   const today = new Date();
 
@@ -204,6 +203,48 @@ const AdminStatistical: React.FC = () => {
     setIsDatePickerOpen(false);
   };
 
+  const chartData = {
+    labels: stats?.categoryChart.map((c) => c.label) || [],
+    datasets: [
+      {
+        label: "Số sản phẩm đã bán",
+        data: stats?.categoryChart.map((c) => c.order_count) || [],
+        backgroundColor: [
+          "rgba(54, 162, 235, 0.6)",
+          "rgba(255, 99, 132, 0.6)",
+          "rgba(123, 55, 132, 0.6)",
+          "rgba(75, 211, 132, 0.6)",
+          "rgba(255, 206, 86, 0.6)",
+        ],
+        borderRadius: 6,
+      },
+    ],
+  };
+
+  const options: ChartOptions<"bar"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (context) => ` ${context.parsed.y} sản phẩm đã bán`,
+        },
+      },
+    },
+    scales: {
+      x: { title: { display: true, text: "Danh mục" } },
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: "Số lượng sản phẩm đã bán" },
+      },
+    },
+  };
+
+  if (loading) {
+    return <div className="p-6 text-center">Đang tải dữ liệu thống kê...</div>;
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -224,6 +265,7 @@ const AdminStatistical: React.FC = () => {
           </ol>
         </nav>
       </div>
+
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex gap-4">
@@ -247,11 +289,12 @@ const AdminStatistical: React.FC = () => {
                     <div className="p-2 font-bold">
                       <DateRangePicker
                         ranges={tempRange}
-                        onChange={(ranges: RangeKeyDict) =>
-                          setTempRange([
-                            ranges.selection as (typeof tempRange)[0],
-                          ])
-                        }
+                        onChange={(ranges: RangeKeyDict) => {
+                          const selection = ranges.selection;
+                          if (selection) {
+                            setTempRange([selection]);
+                          }
+                        }}
                         staticRanges={staticRanges}
                         inputRanges={[]}
                         moveRangeOnFirstSelection={false}
@@ -263,14 +306,12 @@ const AdminStatistical: React.FC = () => {
                       />
                       <div className="flex justify-end gap-2 mt-2">
                         <button
-                          type="button"
                           onClick={handleCancel}
                           className="px-3 py-1.5 text-xs rounded border border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
                         >
                           Hủy
                         </button>
                         <button
-                          type="button"
                           onClick={handleApply}
                           className="px-3 py-1.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700"
                         >
@@ -282,13 +323,14 @@ const AdminStatistical: React.FC = () => {
                 )}
               </div>
             </div>
+
             <div>
               <label className="text-xs font-medium text-gray-700 block mb-1">
                 Nhân viên
               </label>
               <select
-                name="role"
-                required
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
                 className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-52 p-2"
               >
                 <option value="">-- Tất cả --</option>
@@ -300,99 +342,95 @@ const AdminStatistical: React.FC = () => {
           </div>
         </div>
       </div>
+
       <div className="grid grid-cols-3 gap-4 h-32">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
           <h3 className="text-xl font-bold pb-2">Số đơn hàng</h3>
-          <p>10 đơn</p>
+          <p>{stats?.summary.orderCount ?? 0} đơn</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
           <h3 className="text-xl font-bold pb-2">Số sản phẩm</h3>
-          <p>10</p>
+          <p>{stats?.summary.productCount ?? 0}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
           <h3 className="text-xl font-bold pb-2">Doanh thu thuần</h3>
-          <p>100.000đ</p>
+          <p>{(stats?.summary.revenue ?? 0).toFixed(3)}đ</p>
         </div>
       </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-8 bg-white rounded-lg shadow-sm border border-gray-200 p-3">
           <h3 className="text-xl font-bold pb-2">
-            Số đơn hàng đã bán theo danh mục
+            Số sản phẩm đã bán theo danh mục
           </h3>
-          <div className="h-96">
-            <Bar key={formattedRange} data={data} options={options} />
+          <div className="h-[500px] pt-4 px-3">
+            <Bar data={chartData} options={options} />
           </div>
         </div>
+
         <div className="lg:col-span-4 space-y-4">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
             <h3 className="text-xl font-bold pb-2">Top người dùng đặt hàng</h3>
-            <div className="justify-between flex py-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-200">
-                  <img src="/images/avatar.png" alt="avatar" />
-                </div>
-                <div>
-                  <div>
-                    <h5 className="text-gray-900 font-medium">phannhat</h5>
-                    <p className="text-sm italic">Đã mua 20 đơn</p>
+            {stats?.topUsers.length === 0 ? (
+              <p className="text-gray-500 py-4 text-center">Chưa có dữ liệu</p>
+            ) : (
+              stats?.topUsers.map((user, idx) => (
+                <div key={idx} className="justify-between flex py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
+                      <img
+                        src="/images/avatar.png"
+                        alt="avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div>
+                      <h5 className="text-gray-900 font-medium">
+                        {user.username}
+                      </h5>
+                      <p className="text-sm italic">
+                        Đã mua {user.order_count} đơn
+                      </p>
+                    </div>
+                  </div>
+                  <div className="my-auto">
+                    <p>{user.total_spent.toFixed(3)}đ</p>
                   </div>
                 </div>
-              </div>
-              <div className="my-auto">
-                <p>100.000đ</p>
-              </div>
-            </div>
-            <div className="justify-between flex">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-200">
-                  <img src="/images/avatar.png" alt="avatar" />
-                </div>
-                <div>
-                  <div>
-                    <h5 className="text-gray-900 font-medium">nhat</h5>
-                    <p className="text-sm italic">Đã mua 15 đơn</p>
-                  </div>
-                </div>
-              </div>
-              <div className="my-auto">
-                <p>100.000đ</p>
-              </div>
-            </div>
+              ))
+            )}
           </div>
+
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
             <h3 className="text-xl font-bold pb-2">Top sản phẩm bán chạy</h3>
-            <div className="justify-between flex py-2">
-              <div className="flex items-center gap-3">
-                <div className="w-[53px] h-[53px] rounded-lg bg-gray-200 border-2 border-dashed border-gray-400 overflow-hidden">
-                  <img src="/images/menu-1.jpg" alt="menu-1" />
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900">
-                    Cornish - Mackerel
+            {stats?.topProducts.length === 0 ? (
+              <p className="text-gray-500 py-4 text-center">Chưa có dữ liệu</p>
+            ) : (
+              stats?.topProducts.map((product, idx) => (
+                <div key={idx} className="justify-between flex py-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-[53px] h-[53px] rounded-lg bg-gray-200 border-2 border-dashed border-gray-400 overflow-hidden">
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {product.name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {product.sold_count} đã bán
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500">20 đã đán</div>
-                </div>
-              </div>
-              <div className="my-auto">
-                <p>100.000đ</p>
-              </div>
-            </div>
-            <div className="justify-between flex py-2">
-              <div className="flex items-center gap-3">
-                <div className="w-[53px] h-[53px] rounded-lg bg-gray-200 border-2 border-dashed border-gray-400 overflow-hidden">
-                  <img src="/images/menu-1.jpg" alt="menu-1" />
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900">
-                    Cornish - Mackerel
+                  <div className="my-auto">
+                    <p>{product.revenue.toFixed(3)}đ</p>
                   </div>
-                  <div className="text-xs text-gray-500">20 đã đán</div>
                 </div>
-              </div>
-              <div className="my-auto">
-                <p>100.000đ</p>
-              </div>
-            </div>
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -30,6 +30,7 @@ import {
   House,
 } from "lucide-react";
 import { PrintOrder } from "..";
+import * as XLSX from "xlsx";
 
 type OrderStatus = "pending" | "processing" | "completed" | "canceled";
 type FilterStatus = OrderStatus | "all";
@@ -78,6 +79,7 @@ const sizeOptions: ("Small" | "Medium" | "Large")[] = [
   "Medium",
   "Large",
 ];
+
 const statusInfo = {
   completed: {
     label: "Đã giao",
@@ -684,6 +686,52 @@ export default function AdminOrder() {
     }
   };
 
+  const handleExportToExcel = () => {
+    const dataToExport = filteredOrders.map((order) => {
+      const itemsList = order.items
+        .map(
+          (item) =>
+            `${item.name}${item.size ? ` (${item.size})` : ""} x${
+              item.quantity
+            } = ${(item.price * item.quantity).toFixed(3)}đ`
+        )
+        .join("; ");
+
+      return {
+        "Mã đơn hàng": `#DH${order.order_id.toString().padStart(6, "0")}`,
+        "Tài khoản": order.username || "Khách lẻ",
+        "Khách hàng": order.fullname,
+        "Số điện thoại": order.phone,
+        "Địa chỉ giao": order.full_address,
+        "Ngày đặt hàng": new Date(order.created_at).toLocaleString("vi-VN"),
+        "Tổng tiền": `${order.total.toFixed(3)}đ`,
+        "Phương thức TT":
+          order.payment_method === "cash" ? "Tiền mặt" : "Chuyển khoản",
+        "Trạng thái":
+          order.status === "pending"
+            ? "Chờ xác nhận"
+            : order.status === "processing"
+            ? "Đang giao"
+            : order.status === "completed"
+            ? "Đã giao"
+            : "Đã hủy",
+        "Mã voucher": order.voucher_code || "-",
+        "Danh sách món": itemsList || "Không có món",
+      };
+    });
+
+    if (dataToExport.length === 0) {
+      alert("Không có đơn hàng nào để xuất!");
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách đơn hàng");
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `DonHang_BlendCoffee_${today}.xlsx`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -743,12 +791,12 @@ export default function AdminOrder() {
             >
               <Plus className="w-4 h-4" /> Thêm mới
             </button>
-            <a
-              href="#"
+            <button
+              onClick={handleExportToExcel}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
             >
-              <Download className="w-4 h-4" /> Xuất
-            </a>
+              <Download className="w-4 h-4" /> Xuất Excel
+            </button>
           </div>
         </div>
       </div>
@@ -979,10 +1027,19 @@ export default function AdminOrder() {
                     {new Date(order.created_at).toLocaleDateString("vi-VN")}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
-                    {order.total.toFixed(2)}đ
+                    {order.total.toFixed(3)}đ
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {order.payment_method}
+                  <td className="px-4 py-3 text-sm text-gray-900 font-bold italic">
+                    {(() => {
+                      const paymentMethod = {
+                        cash: { label: "Tiền mặt" },
+                        bank_transfer: { label: "Chuyển khoản" },
+                      };
+                      return (
+                        paymentMethod[order.payment_method]?.label ||
+                        order.payment_method
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3">
                     {(() => {
@@ -1225,8 +1282,8 @@ export default function AdminOrder() {
                                     {item.price
                                       ? `${parseFloat(
                                           String(item.price)
-                                        ).toFixed(2)}đ`
-                                      : "0.00đ"}
+                                        ).toFixed(3)}đ`
+                                      : "0đ"}
                                   </p>
                                 </div>
                               ))}
@@ -1340,8 +1397,8 @@ export default function AdminOrder() {
                                         return totalPrice
                                           ? `${parseFloat(
                                               String(totalPrice)
-                                            ).toFixed(2)}đ`
-                                          : "0.00đ";
+                                            ).toFixed(3)}đ`
+                                          : "0.000đ";
                                       })()}
                                     </p>
                                     <button
@@ -1392,26 +1449,31 @@ export default function AdminOrder() {
                                 Thành tiền
                               </span>
                               <span className="text-right">
-                                {subtotal.toFixed(2)}đ
+                                {subtotal.toFixed(3)}đ
                               </span>
                               <span className="text-gray-400 text-right">
                                 Vận chuyển
                               </span>
                               <span className="text-right">
-                                {deliveryFee.toFixed(2)}đ
+                                {deliveryFee === 0
+                                  ? "Miễn phí"
+                                  : `${deliveryFee}đ`}
                               </span>
                               <span className="text-gray-400 text-right">
                                 Giảm giá
                               </span>
                               <span className="text-right text-green-500 font-medium">
-                                -{discount.toFixed(2)}đ
+                                -
+                                {discount === 0
+                                  ? "0đ"
+                                  : `${discount.toFixed(3)}đ`}
                               </span>
                             </div>
                             <hr className="border-gray-600 max-w-xs ml-auto" />
                             <div className="grid grid-cols-2 max-w-xs ml-auto text-lg font-bold">
                               <span className="text-right">Tổng tiền</span>
-                              <span className="text-right text-yellow-400 drop-shadow glow">
-                                {total.toFixed(2)}đ
+                              <span className="text-right text-yellow-600 drop-shadow glow">
+                                {total.toFixed(3)}đ
                               </span>
                             </div>
                           </div>
@@ -1674,7 +1736,7 @@ export default function AdminOrder() {
                       </p>
                     </div>
                     <p className="font-bold text-lg my-auto">
-                      {item.price.toFixed(2)}đ
+                      {item.price.toFixed(3)}đ
                     </p>
                   </div>
                 ))}
@@ -1692,7 +1754,7 @@ export default function AdminOrder() {
                           (sum, item) => sum + item.price * item.quantity,
                           0
                         )
-                        .toFixed(2)}
+                        .toFixed(3)}
                       đ
                     </span>
                   </div>
@@ -1711,12 +1773,12 @@ export default function AdminOrder() {
                         {detailOrder.voucher_code &&
                           `(${detailOrder.voucher_code})`}
                       </span>
-                      <span>-{detailOrder.discount.toFixed(2)}</span>
+                      <span>-{detailOrder.discount.toFixed(3)}</span>
                     </div>
                   )}
                   <div className="pt-3 border-t border-gray-700 flex justify-between text-lg font-bold text-yellow-600">
                     <span>Thành tiền</span>
-                    <span>{detailOrder.total.toFixed(2)}đ</span>
+                    <span>{detailOrder.total.toFixed(3)}đ</span>
                   </div>
                 </div>
               </div>

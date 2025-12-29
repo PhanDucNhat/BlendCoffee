@@ -11,6 +11,7 @@ import {
   X,
   House,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface UserItem {
   id: number;
@@ -218,6 +219,32 @@ export default function AdminUser() {
     }
   };
 
+  const handleExportToExcel = () => {
+    const dataToExport = filteredUsers.map((user) => ({
+      ID: user.id,
+      "Tên tài khoản": user.username,
+      Email: user.email,
+      "Phân quyền":
+        user.role === "admin"
+          ? "Quản trị viên"
+          : user.role === "employee"
+          ? "Nhân viên"
+          : "Người dùng",
+      "Ngày tạo": new Date(user.created_at).toLocaleDateString("vi-VN"),
+    }));
+
+    if (dataToExport.length === 0) {
+      alert("Không có dữ liệu nhân sự để xuất!");
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách nhân sự");
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `NhanSu_BlendCoffee_${today}.xlsx`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -277,12 +304,12 @@ export default function AdminUser() {
             >
               <Plus className="w-4 h-4" /> Thêm mới
             </button>
-            <a
-              href="#"
+            <button
+              onClick={handleExportToExcel}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
             >
-              <Download className="w-4 h-4" /> Xuất
-            </a>
+              <Download className="w-4 h-4" /> Xuất Excel
+            </button>
           </div>
         </div>
       </div>
