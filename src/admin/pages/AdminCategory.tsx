@@ -4,30 +4,25 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Download,
   AlertCircle,
   Edit,
   Trash2,
   X,
-<<<<<<< HEAD
-} from "lucide-react";
-=======
   House,
 } from "lucide-react";
-import * as XLSX from "xlsx";
->>>>>>> admin
 
-interface UserItem {
-  id: number;
-  username: string;
-  email: string;
-  role: "user" | "admin" | "employee";
-  created_at: string;
+interface CategoryItem {
+  category_id: number;
+  category_name: string;
+  status?: 1 | 0;
+  display: number;
 }
 
-export default function AdminUser() {
-  const [users, setUsers] = useState<UserItem[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<UserItem[]>([]);
+export default function AdminCategory() {
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [filteredCategories, setFilteredCategories] = useState<CategoryItem[]>(
+    []
+  );
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,65 +30,103 @@ export default function AdminUser() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<UserItem | null>(null);
-  const [deletingItem, setDeletingItem] = useState<UserItem | null>(null);
+  const [editingItem, setEditingItem] = useState<CategoryItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<CategoryItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [localStatuses, setLocalStatuses] = useState<{
+    [key: number]: boolean;
+  }>({});
 
   const itemsPerPage = 10;
 
-  const fetchUsers = async () => {
+  const fetchCategories = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("http://localhost:5000/api/user");
+      const res = await fetch("http://localhost:5000/api/categories");
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(
-          `HTTP ${res.status}: ${errText || "Không thể tải danh sách"}`
+          `HTTP ${res.status}: ${errText || "Không thể tải danh mục"}`
         );
       }
-      const data = (await res.json()) as UserItem[];
-      setUsers(data);
-      setFilteredUsers(data);
+      const data = (await res.json()) as CategoryItem[];
+      setCategories(data);
+      setFilteredCategories(data);
+      const initialStatuses: { [key: number]: boolean } = {};
+      data.forEach((category) => {
+        initialStatuses[category.category_id] = category.status === 1;
+      });
+      setLocalStatuses(initialStatuses);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Lỗi kết nối server";
       setError(errorMessage);
-      console.error("Fetch blogs error:", err);
+      console.error("Fetch categories error:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchCategories();
   }, []);
 
   useEffect(() => {
-    const filtered = users.filter(
-      (user) =>
-        user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.role?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+    const filtered = categories.filter(
+      (category) =>
+        category.category_name
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ?? false
     );
-    setFilteredUsers(filtered);
+    setFilteredCategories(filtered);
     setCurrentPage(1);
-  }, [searchTerm, users]);
+  }, [searchTerm, categories]);
 
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-  const paginatedUsers = filteredUsers.slice(
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
+  const paginatedCategories = filteredCategories.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
+  const handleToggleStatus = async (categoryId: number) => {
+    const currentStatus = localStatuses[categoryId];
+    const newStatus = !currentStatus;
+    setLocalStatuses((prev) => ({ ...prev, [categoryId]: newStatus }));
+
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/admin/category/${categoryId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus ? "1" : "0" }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Cập nhật trạng thái thất bại");
+      }
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.category_id === categoryId ? { ...c, status: newStatus ? 1 : 0 } : c
+        )
+      );
+    } catch (err) {
+      setLocalStatuses((prev) => ({ ...prev, [categoryId]: currentStatus }));
+      alert(err instanceof Error ? err.message : "Lỗi cập nhật trạng thái");
+    }
+  };
+
   const toggleSelectAll = () => {
     if (
-      selectedItems.length === paginatedUsers.length &&
-      paginatedUsers.length > 0
+      selectedItems.length === paginatedCategories.length &&
+      paginatedCategories.length > 0
     ) {
       setSelectedItems([]);
     } else {
-      setSelectedItems(paginatedUsers.map((b) => b.id));
+      setSelectedItems(paginatedCategories.map((c) => c.category_id));
     }
   };
 
@@ -116,32 +149,36 @@ export default function AdminUser() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    const username = formData.get("username")?.toString().trim();
-    const email = formData.get("email")?.toString().trim();
-    const password = formData.get("password")?.toString().trim();
-    const role = formData.get("role")?.toString().trim();
+    const category_name = formData.get("category_name")?.toString().trim();
+    const display = formData.get("display")?.toString();
+    const status = formData.get("status") ? "1" : "0";
 
-    if (!username || !email || !password || !role) {
-      alert("Vui lòng nhập đầy đủ thông tin!");
+    if (!category_name) {
+      alert("Vui lòng nhập tên danh mục!");
       return;
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/admin/user/add", {
+      const res = await fetch("http://localhost:5000/api/admin/category/add", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category_name,
+          display: Number(display) || 0,
+          status,
+        }),
       });
       const data = await res.json();
       if (!res.ok)
         throw new Error(
-          (data as { error?: string }).error || "Thêm nhân sự thất bại"
+          (data as { error?: string }).error || "Thêm danh mục thất bại"
         );
-      alert("Thêm nhân sự thành công!");
+      alert("Thêm danh mục thành công!");
       closeModals();
-      fetchUsers();
+      fetchCategories();
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Lỗi khi thêm nhân sự";
+        err instanceof Error ? err.message : "Lỗi khi thêm danh mục";
       alert(message);
     }
   };
@@ -151,13 +188,24 @@ export default function AdminUser() {
     if (!editingItem) return;
 
     const formData = new FormData(e.currentTarget);
+    const category_name = formData.get("category_name")?.toString().trim();
+    const display = formData.get("display")?.toString();
+
+    if (!category_name) {
+      alert("Vui lòng nhập tên danh mục!");
+      return;
+    }
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/user/${editingItem.id}`,
+        `http://localhost:5000/api/admin/category/${editingItem.category_id}`,
         {
           method: "PUT",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            category_name,
+            display: Number(display) || 0,
+          }),
         }
       );
       const data = await res.json();
@@ -165,9 +213,9 @@ export default function AdminUser() {
         throw new Error(
           (data as { error?: string }).error || "Cập nhật thất bại"
         );
-      alert("Cập nhật nhân sự thành công!");
+      alert("Cập nhật danh mục thành công!");
       closeModals();
-      fetchUsers();
+      fetchCategories();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Lỗi khi cập nhật";
       alert(message);
@@ -178,7 +226,7 @@ export default function AdminUser() {
     if (!deletingItem) return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/user/${deletingItem.id}`,
+        `http://localhost:5000/api/admin/category/${deletingItem.category_id}`,
         {
           method: "DELETE",
         }
@@ -187,9 +235,9 @@ export default function AdminUser() {
         const errText = await res.text();
         throw new Error(errText || "Xóa thất bại");
       }
-      alert("Xóa thành công!");
+      alert("Xóa danh mục thành công!");
       closeModals();
-      fetchUsers();
+      fetchCategories();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Lỗi khi xóa";
       alert(message);
@@ -200,7 +248,7 @@ export default function AdminUser() {
     if (selectedItems.length === 0) return;
     try {
       const res = await fetch(
-        "http://localhost:5000/api/admin/user/bulk-delete",
+        "http://localhost:5000/api/admin/category/bulk-delete",
         {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
@@ -215,7 +263,7 @@ export default function AdminUser() {
       alert(data.message || "Xóa thành công!");
       setSelectedItems([]);
       setShowBulkDeleteModal(false);
-      fetchUsers();
+      fetchCategories();
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Lỗi khi xóa hàng loạt";
@@ -223,35 +271,6 @@ export default function AdminUser() {
     }
   };
 
-<<<<<<< HEAD
-=======
-  const handleExportToExcel = () => {
-    const dataToExport = filteredUsers.map((user) => ({
-      ID: user.id,
-      "Tên tài khoản": user.username,
-      Email: user.email,
-      "Phân quyền":
-        user.role === "admin"
-          ? "Quản trị viên"
-          : user.role === "employee"
-          ? "Nhân viên"
-          : "Người dùng",
-      "Ngày tạo": new Date(user.created_at).toLocaleDateString("vi-VN"),
-    }));
-
-    if (dataToExport.length === 0) {
-      alert("Không có dữ liệu nhân sự để xuất!");
-      return;
-    }
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách nhân sự");
-    const today = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(workbook, `NhanSu_BlendCoffee_${today}.xlsx`);
-  };
-
->>>>>>> admin
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -278,33 +297,17 @@ export default function AdminUser() {
             <li className="inline-flex items-center">
               <Link
                 to="/admin/dashboard"
-<<<<<<< HEAD
-                className="hover:text-gray-900 flex items-center"
-              >
-                <svg
-                  className="w-4 h-4 mr-1.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
-                </svg>
-=======
                 className="hover:text-gray-900 flex items-center gap-2"
               >
                 <House className="h-4 w-4" />
->>>>>>> admin
                 Trang chủ
               </Link>
             </li>
             <li>
-              <span className="mx-1">/</span> Quản lý nhân sự
+              <span className="mx-1">/</span> Quản lý danh mục
             </li>
             <li>
-<<<<<<< HEAD
               <span className="mx-1">/</span>{" "}
-=======
-              <span className="mx-1">/</span>
->>>>>>> admin
               <span className="text-gray-400">Danh sách</span>
             </li>
           </ol>
@@ -313,7 +316,7 @@ export default function AdminUser() {
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           <input
             type="text"
-            placeholder="Tìm kiếm nhân viên..."
+            placeholder="Tìm kiếm danh mục..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full sm:max-w-xs px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
@@ -327,21 +330,6 @@ export default function AdminUser() {
             >
               <Plus className="w-4 h-4" /> Thêm mới
             </button>
-<<<<<<< HEAD
-            <a
-              href="#"
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
-            >
-              <Download className="w-4 h-4" /> Xuất
-            </a>
-=======
-            <button
-              onClick={handleExportToExcel}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
-            >
-              <Download className="w-4 h-4" /> Xuất Excel
-            </button>
->>>>>>> admin
           </div>
         </div>
       </div>
@@ -349,11 +337,7 @@ export default function AdminUser() {
         <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-cyan-900">
-<<<<<<< HEAD
               Đã chọn <strong>{selectedItems.length}</strong> bài viết
-=======
-              Đã chọn <strong>{selectedItems.length}</strong> nhân sự
->>>>>>> admin
             </span>
             <button
               onClick={() => setSelectedItems([])}
@@ -379,8 +363,8 @@ export default function AdminUser() {
                   <input
                     type="checkbox"
                     checked={
-                      selectedItems.length === paginatedUsers.length &&
-                      paginatedUsers.length > 0
+                      selectedItems.length === paginatedCategories.length &&
+                      paginatedCategories.length > 0
                     }
                     onChange={toggleSelectAll}
                     className="w-4 h-4 text-cyan-600 rounded border-gray-300"
@@ -390,27 +374,13 @@ export default function AdminUser() {
                   ID
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-<<<<<<< HEAD
-                  Username
-=======
-                  Tên tài khoản
->>>>>>> admin
+                  Tên danh mục
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  Email
+                  Thứ tự hiển thị
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-<<<<<<< HEAD
-                  Role
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  Created_at
-=======
-                  Phân quyền
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  Ngày tạo
->>>>>>> admin
+                  Trạng thái
                 </th>
                 <th className="pr-16 py-3 text-right text-xs font-medium text-gray-500">
                   Hành động
@@ -418,50 +388,46 @@ export default function AdminUser() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {paginatedUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+              {paginatedCategories.map((category) => (
+                <tr key={category.category_id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
-                      checked={selectedItems.includes(user.id)}
-                      onChange={() => toggleSelectItem(user.id)}
+                      checked={selectedItems.includes(category.category_id)}
+                      onChange={() => toggleSelectItem(category.category_id)}
                       className="w-4 h-4 text-cyan-600 rounded border-gray-300"
                     />
                   </td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                    #{user.id}
+                    #{category.category_id}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {category.category_name}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {category.display}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-200">
-                        <img src="/images/avatar.png" alt="avatar" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {user.username}
-                        </div>
-                      </div>
+                    <div className="relative inline-block w-11 h-5">
+                      <input
+                        checked={localStatuses[category.category_id] || false}
+                        id={`switch-${category.category_id}`}
+                        type="checkbox"
+                        onChange={() =>
+                          handleToggleStatus(category.category_id)
+                        }
+                        className="peer appearance-none w-11 h-5 bg-slate-100 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
+                      />
+                      <label
+                        htmlFor={`switch-${category.category_id}`}
+                        className="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-slate-800 cursor-pointer"
+                      ></label>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {user.email}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {user.role}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {new Date(user.created_at).toLocaleDateString("vi-VN")}
                   </td>
                   <td className="px-4 py-3 text-right space-x-1">
                     <button
                       onClick={() => {
-                        setEditingItem(user);
-<<<<<<< HEAD
-                        // setImagePreview(
-                        //   blog.image_url ? `${blog.image_url}` : ""
-                        // );
-=======
->>>>>>> admin
+                        setEditingItem(category);
                         setShowEditModal(true);
                       }}
                       className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-cyan-600 rounded hover:bg-cyan-700"
@@ -470,7 +436,7 @@ export default function AdminUser() {
                     </button>
                     <button
                       onClick={() => {
-                        setDeletingItem(user);
+                        setDeletingItem(category);
                         setShowDeleteModal(true);
                       }}
                       className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700"
@@ -488,9 +454,9 @@ export default function AdminUser() {
             Hiển thị{" "}
             <strong>
               {(currentPage - 1) * itemsPerPage + 1}-
-              {Math.min(currentPage * itemsPerPage, filteredUsers.length)}
+              {Math.min(currentPage * itemsPerPage, filteredCategories.length)}
             </strong>{" "}
-            trong <strong>{filteredUsers.length}</strong>
+            trong <strong>{filteredCategories.length}</strong>
           </span>
           <div className="flex gap-1 mt-2 sm:mt-0">
             <button
@@ -515,7 +481,7 @@ export default function AdminUser() {
           <div className="relative w-full max-w-2xl p-3">
             <div className="bg-white rounded-lg shadow-lg">
               <div className="flex items-start justify-between p-4 border-b">
-                <h3 className="text-xl font-semibold">Thêm nhân sự mới</h3>
+                <h3 className="text-xl font-semibold">Thêm danh mục</h3>
                 <button
                   onClick={closeModals}
                   className="text-gray-400 hover:bg-gray-200 hover:text-gray-900 rounded-lg p-1.5"
@@ -525,67 +491,44 @@ export default function AdminUser() {
               </div>
               <form onSubmit={handleAdd}>
                 <div className="p-6 space-y-6 max-h-[600px] overflow-y-auto">
-                  <div className="grid grid-cols-6 gap-6 text-left">
-                    <div className="sm:col-span-3">
-                      <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                        Fullname
-=======
-                        Tên tài khoản
->>>>>>> admin
-                      </label>
-                      <input
-                        name="username"
-                        type="text"
-                        required
-                        className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                      />
-                    </div>
-                    <div className="sm:col-span-3">
-                      <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                        Role
-=======
-                        Phân quyền
->>>>>>> admin
-                      </label>
-                      <select
-                        name="role"
-                        required
-                        className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                      >
-                        <option value="">-- Chọn vai trò --</option>
-                        <option value="admin">admin</option>
-                        <option value="employee">employee</option>
-                        <option value="user">user</option>
-                      </select>
-                    </div>
-                  </div>
                   <div>
                     <label className="text-sm font-medium text-gray-900 block mb-2">
-                      Email
+                      Tên danh mục
                     </label>
                     <input
-                      name="email"
-                      type="email"
+                      name="category_name"
+                      type="text"
                       required
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                      Password
-=======
-                      Mật khẩu
->>>>>>> admin
+                      Thứ tự hiển thị
                     </label>
                     <input
-                      name="password"
-                      type="password"
+                      name="display"
+                      type="number"
+                      min="1"
                       required
+                      placeholder="1"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+                    ></input>
+                  </div>
+                  <div className="mt-4 flex items-center">
+                    <input
+                      id="status"
+                      name="status"
+                      type="checkbox"
+                      defaultChecked
+                      className="w-4 h-4 text-cyan-600 bg-gray-100 border-gray-300 rounded focus:ring-cyan-500 focus:ring-2"
                     />
+                    <label
+                      htmlFor="status"
+                      className="ml-2 text-sm font-medium text-gray-900"
+                    >
+                      Kích hoạt
+                    </label>
                   </div>
                 </div>
                 <div className="flex justify-end gap-3 p-4 border-t">
@@ -593,7 +536,7 @@ export default function AdminUser() {
                     type="submit"
                     className="px-6 py-2.5 bg-cyan-600 text-white font-medium rounded-lg hover:bg-cyan-700"
                   >
-                    Thêm nhân sự
+                    Thêm danh mục
                   </button>
                   <button
                     type="button"
@@ -613,7 +556,7 @@ export default function AdminUser() {
           <div className="relative w-full max-w-2xl p-3">
             <div className="bg-white rounded-lg shadow-lg">
               <div className="flex items-start justify-between p-4 border-b">
-                <h3 className="text-xl font-semibold">Chỉnh sửa nhân sự</h3>
+                <h3 className="text-xl font-semibold">Chỉnh sửa danh mục</h3>
                 <button
                   onClick={closeModals}
                   className="text-gray-400 hover:bg-gray-200 hover:text-gray-900 rounded-lg p-1.5"
@@ -623,55 +566,30 @@ export default function AdminUser() {
               </div>
               <form onSubmit={handleEdit}>
                 <div className="p-6 space-y-6 max-h-[600px] overflow-y-auto">
-                  <div className="grid grid-cols-6 gap-6 text-left">
-                    <div className="sm:col-span-3">
-                      <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                        Fullname
-=======
-                        Tên tài khoản
->>>>>>> admin
-                      </label>
-                      <input
-                        name="username"
-                        type="text"
-                        defaultValue={editingItem.username}
-                        required
-                        className="bg-gray-400 text-gray-900 sm:text-sm rounded-lg w-full p-2.5"
-                        disabled
-                      />
-                    </div>
-                    <div className="sm:col-span-3">
-                      <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                        Role
-=======
-                        Phân quyền
->>>>>>> admin
-                      </label>
-                      <select
-                        name="role"
-                        defaultValue={editingItem.role}
-                        required
-                        className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
-                      >
-                        <option value="admin">admin</option>
-                        <option value="employee">employee</option>
-                        <option value="user">user</option>
-                      </select>
-                    </div>
-                  </div>
                   <div>
                     <label className="text-sm font-medium text-gray-900 block mb-2">
-                      Email
+                      Tên danh mục
                     </label>
                     <input
-                      name="email"
-                      type="email"
-                      defaultValue={editingItem.email}
+                      name="category_name"
+                      type="text"
+                      defaultValue={editingItem.category_name}
                       required
-                      className="w-full px-4 py-2 bg-gray-400 rounded-lg"
-                      disabled
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">
+                      Thứ tự hiển thị
+                    </label>
+                    <input
+                      name="display"
+                      type="number"
+                      min="1"
+                      defaultValue={editingItem.display}
+                      required
+                      placeholder="0"
+                      className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                     />
                   </div>
                 </div>
@@ -710,12 +628,8 @@ export default function AdminUser() {
                 </svg>
               </div>
               <h3 className="mt-5 text-xl font-normal text-gray-700">
-<<<<<<< HEAD
-                Bạn có chắc muốn xóa bài viết{" "}
-=======
-                Bạn có chắc muốn xóa nhân sự có tên tài khoản
->>>>>>> admin
-                <strong>"{deletingItem.username}"</strong>?
+                Bạn có chắc muốn xóa danh mục
+                <strong>"{deletingItem.category_name}"</strong>?
               </h3>
               <div className="mt-6 flex justify-center gap-4">
                 <button
@@ -751,11 +665,7 @@ export default function AdminUser() {
                 </svg>
               </div>
               <h3 className="mt-5 text-xl font-normal text-gray-700">
-<<<<<<< HEAD
-                Xóa <strong>{selectedItems.length}</strong> bài viết đã chọn?
-=======
-                Xóa <strong>{selectedItems.length}</strong> nhân sự đã chọn?
->>>>>>> admin
+                Xóa <strong>{selectedItems.length}</strong> danh mục đã chọn?
               </h3>
               <div className="mt-6 flex justify-center gap-4">
                 <button

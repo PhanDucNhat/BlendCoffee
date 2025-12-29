@@ -5,15 +5,22 @@ import bcrypt from "bcrypt"; //mã hóa mk
 import jwt from "jsonwebtoken"; //xác thực users
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { PoolConnection } from "mysql2/promise";
+<<<<<<< HEAD
 
+=======
+import { startOfDay, endOfDay } from "date-fns";
+>>>>>>> admin
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { error } from "console";
+<<<<<<< HEAD
 // import { use } from "react";
 // import { ReceiptEuroIcon } from "lucide-react";
 // import { error } from "console";
+=======
+>>>>>>> admin
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -137,6 +144,38 @@ interface AddressItem extends RowDataPacket {
   is_default: 1 | 0;
 }
 
+<<<<<<< HEAD
+=======
+interface OrderStatusCount extends RowDataPacket {
+  status: string;
+  count: number;
+}
+
+interface CategoryStat extends RowDataPacket {
+  label: string;
+  order_count: number;
+}
+
+interface TopUserStat extends RowDataPacket {
+  username: string | null;
+  email: string | null;
+  order_count: number;
+  total_spent: number;
+}
+
+interface TopProductStat extends RowDataPacket {
+  name: string;
+  image_url: string | null;
+  sold_count: number;
+  revenue: number;
+}
+
+interface SummaryStats extends RowDataPacket {
+  count: number
+  revenue: number | null;
+}
+
+>>>>>>> admin
 const fetchCartDetails = async (conn: PoolConnection, userId: number) => {
   const [cartRows] = await conn.query<RowDataPacket[]>(
     "SELECT cart_id FROM cart WHERE id = ?",
@@ -207,6 +246,7 @@ interface AuthRequest extends Request {
   };
 }
 
+<<<<<<< HEAD
 // interface BlogItem extends RowDataPacket {
 //   blog_id: number;
 //   title: string;
@@ -216,6 +256,8 @@ interface AuthRequest extends Request {
 //   comments_count: number;
 // }
 
+=======
+>>>>>>> admin
 const app = express();
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -479,6 +521,128 @@ app.delete("/api/admin/voucher/bulk-delete", async (req: Request, res: Response)
   }
 });
 
+<<<<<<< HEAD
+=======
+app.get("/api/categories", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM menu_category");
+    res.json(rows);
+  } catch (err) {
+    console.error("Lỗi lấy danh mục:", err);
+    res.status(500).json({ error: "Lỗi server" });
+  }
+});
+
+app.post("/api/admin/category/add", async (req: Request, res: Response) => {
+  const { category_name, status, display } = req.body;
+
+  try {
+    await db.query(
+      `UPDATE menu_category SET display = display + 1 WHERE display >= ?`,
+      [display || 0]
+    );
+
+    const [result] = await db.query<ResultSetHeader>(
+      `INSERT INTO menu_category (category_name, status, display)
+      VALUES (?, ?, ?)`,
+      [category_name, status === "1" ? 1 : 0, display || 0]
+    );
+    res.json({ message: "Thêm danh mục thành công!", category_id: result.insertId });
+  } catch (error) {
+    console.error("Lỗi thêm danh mục:", error);
+    res.status(500).json({ error: "Không thể thêm danh mục" });
+  }
+});
+
+app.put("/api/admin/category/:id", async (req: Request, res: Response) => {
+  const categoryId = Number(req.params.id);
+  if (isNaN(categoryId)) return res.status(400).json({ error: "ID không hợp lệ" });
+
+  const { category_name, status, display } = req.body as { category_name?: string; status?: string; display?: number };
+
+  try {
+    const [currentRows] = await db.query<RowDataPacket[]>(
+      "SELECT display FROM menu_category WHERE category_id = ?",
+      [categoryId]
+    );
+    if (currentRows.length === 0) return res.status(404).json({ error: "Không tìm thấy danh mục" });
+    const oldDisplay = currentRows[0].display;
+
+    if (display !== undefined && display !== oldDisplay) {
+      if (display < oldDisplay) {
+        await db.query(
+          `UPDATE menu_category SET display = display + 1 WHERE display >= ? AND display < ? AND category_id != ?`,
+          [display, oldDisplay, categoryId]
+        );
+      } else {
+        await db.query(
+          `UPDATE menu_category SET display = display - 1 WHERE display > ? AND display <= ? AND category_id != ?`,
+          [oldDisplay, display, categoryId]
+        );
+      }
+    }
+
+    const updates: string[] = [];
+    const values: (string | number | null)[] = [];
+
+    if (category_name !== undefined) { updates.push("category_name = ?"); values.push(category_name); }
+    if (status !== undefined) { updates.push("status = ?"); values.push(status === "1" ? 1 : 0); }
+    if (display !== undefined) { updates.push("display = ?"); values.push(display); }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: "Không có dữ liệu để cập nhật" });
+    }
+
+    values.push(categoryId);
+
+    await db.query(`UPDATE menu_category SET ${updates.join(", ")} WHERE category_id = ?`, values);
+    res.json({ message: "Cập nhật danh mục thành công!" });
+  } catch (error) {
+    console.error("Lỗi cập nhật danh mục:", error);
+    res.status(500).json({ error: "Không thể cập nhật" });
+  }
+});
+
+app.delete("/api/admin/category/:id", async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  if (!id || id <= 0) return res.status(400).json({ error: "ID không hợp lệ" });
+
+  try {
+    const [result] = await db.query<ResultSetHeader>("DELETE FROM menu_category WHERE category_id = ?", [id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Không tìm thấy danh mục" });
+    }
+    res.json({ message: "Xóa danh mục thành công!" });
+  } catch (error) {
+    console.error("Lỗi xóa danh mục:", error);
+    res.status(500).json({ error: "Lỗi server khi xóa" });
+  }
+});
+
+app.delete("/api/admin/category/bulk-delete", async (req: Request, res: Response) => {
+  const { ids } = req.body as { ids: number[] };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "Danh sách ID không hợp lệ" });
+  }
+
+  const validIds = ids.filter(id => typeof id === "number" && id > 0);
+  if (validIds.length === 0) return res.status(400).json({ error: "Không có ID hợp lệ" });
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM menu_category WHERE category_id IN (?)",
+      [validIds]
+    );
+    res.json({ message: `Đã xóa ${result.affectedRows} danh mục!` });
+  } catch (error) {
+    console.error("Lỗi xóa hàng loạt:", error);
+    res.status(500).json({ error: "Lỗi server" });
+  }
+});
+
+
+>>>>>>> admin
 app.get("/api/menu", async (req: Request, res: Response) => {
   try {
     const [rows] = await db.query(`
@@ -806,17 +970,7 @@ app.get("/api/admin/menu-sizes", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
   }
 });
-
-app.get("/api/categories", async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT category_id, category_name FROM menu_category");
-    res.json(rows);
-  } catch (err) {
-    console.error("Lỗi lấy danh mục:", err);
-    res.status(500).json({ error: "Lỗi server" });
-  }
-});
-
+    
 
 app.get("/api/blog", async (req: Request, res: Response) => {
   try {
@@ -828,6 +982,7 @@ app.get("/api/blog", async (req: Request, res: Response) => {
   }
 });
 
+<<<<<<< HEAD
 // app.get("/api/admin/blog", async (req: Request, res: Response) => {
 //   try {
 //     const [rows] = await db.query<BlogItem[]>(
@@ -842,6 +997,8 @@ app.get("/api/blog", async (req: Request, res: Response) => {
 //   }
 // });
 
+=======
+>>>>>>> admin
 app.post("/api/admin/blog/add", upload.single("image"), async (req: Request, res: Response) => {
   const { title, description } = req.body;
   const image_url = req.file ? `/images/${req.file.filename}` : null;
@@ -1835,11 +1992,19 @@ app.post("/api/change-password", authenticateToken, async (req: AuthRequest, res
   const { oldPassword, newPassWord } = req.body;
 
   if (!oldPassword || !newPassWord) {
+<<<<<<< HEAD
     return res.status(400).json({ mesage: "Vui lòng nhập đầy đủ mật khẩu cũ và mới" });
   }
 
   if (newPassWord.length < 6) {
     return res.status(400).json({ mesage: "Mật khẩu mới phải có ít nhất 6 ký tự" });
+=======
+    return res.status(400).json({ message: "Vui lòng nhập đầy đủ mật khẩu cũ và mới" });
+  }
+
+  if (newPassWord.length < 6) {
+    return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự" });
+>>>>>>> admin
   }
 
   try {
@@ -2045,6 +2210,187 @@ app.delete("/api/addresses/delete/:id", authenticateToken, async (req: AuthReque
   }
 });
 
+<<<<<<< HEAD
+=======
+app.get("/api/admin/dashboard-stats", async (req: Request, res: Response) => {
+  try {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+    const [orderCountResult] = await db.query<RowDataPacket[]>(
+      "SELECT COUNT(*) as count FROM orders WHERE created_at >= ? AND created_at < ?",
+      [startOfDay, endOfDay]
+    );
+    const orderCount = (orderCountResult[0] as { count: number }).count;
+
+    const [revenueResult] = await db.query<RowDataPacket[]>(
+      "SELECT SUM(total) as revenue FROM orders WHERE created_at >= ? AND created_at < ?",
+      [startOfDay, endOfDay]
+    );
+    const revenue = (revenueResult[0] as { revenue: number | null }).revenue || 0;
+
+    const [statusCounts] = await db.query<OrderStatusCount[]>(
+      "SELECT status, COUNT(*) as count FROM orders GROUP BY status"
+    );
+
+    const statusMap: Record<string, number> = {};
+    statusCounts.forEach((row) => {
+      statusMap[row.status] = row.count;
+    });
+
+    res.json({
+      orderCount,
+      revenue,
+      statusCounts: {
+        pending: statusMap.pending || 0,
+        processing: statusMap.processing || 0,
+        completed: statusMap.completed || 0,
+        cancel: statusMap.cancel || 0,
+      },
+    });
+  } catch (err) {
+    console.error("Dashboard stats error:", err);
+    res.status(500).json({ error: "Lỗi truy vấn thống kê" });
+  }
+});
+
+app.get("/api/admin/statistics", async (req: Request, res: Response) => {
+  const { start_date, end_date, employee_id } = req.query as {
+    start_date?: string;
+    end_date?: string;
+    employee_id?: string;
+  };
+
+  if (!start_date || !end_date) {
+    return res.status(400).json({ message: "Thiếu tham số start_date và end_date" });
+  }
+
+  let startDate: Date;
+  let endDate: Date;
+
+  try {
+    startDate = startOfDay(new Date(start_date));
+    endDate = endOfDay(new Date(end_date));
+  } catch {
+    return res.status(400).json({ message: "Định dạng ngày không hợp lệ (YYYY-MM-DD)" });
+  }
+
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return res.status(400).json({ message: "Ngày không hợp lệ" });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    const whereConditions: string[] = ["o.created_at >= ? AND o.created_at <= ?"];
+    const queryParams: (Date | number)[] = [startDate, endDate];
+
+    if (employee_id && !isNaN(Number(employee_id))) {
+      whereConditions.push("o.id = ?");
+      queryParams.push(Number(employee_id));
+    }
+
+    const whereClause =
+      whereConditions.length > 0 ? "WHERE " + whereConditions.join(" AND ") : "";
+
+    const [orderCountRows] = await conn.query<SummaryStats[]>(
+      `SELECT COUNT(*) as count FROM orders o ${whereClause}`,
+      queryParams
+    );
+    const orderCount = orderCountRows[0].count;
+
+    const [revenueRows] = await conn.query<SummaryStats[]>(
+      `SELECT COALESCE(SUM(o.total), 0) as revenue FROM orders o ${whereClause}`,
+      queryParams
+    );
+    const revenue = Number(revenueRows[0].revenue ?? 0);
+
+    const [productCountRows] = await conn.query<SummaryStats[]>(
+      `SELECT COALESCE(SUM(oi.quantity), 0) as count 
+       FROM order_items oi 
+       JOIN orders o ON oi.order_id = o.order_id 
+       ${whereClause}`,
+      queryParams
+    );
+    const productCount = Number(productCountRows[0].count ?? 0);
+
+    const [categoryStats] = await conn.query<CategoryStat[]>(
+      `SELECT 
+         COALESCE(c.category_name, 'Khác') AS label,
+         COALESCE(SUM(oi.quantity), 0) AS order_count
+       FROM order_items oi
+       JOIN menu m ON oi.menu_id = m.menu_id
+       JOIN menu_category c ON m.category_id = c.category_id
+       JOIN orders o ON oi.order_id = o.order_id
+       ${whereClause}
+       GROUP BY c.category_id, c.category_name
+       ORDER BY order_count DESC`,
+      queryParams
+    );
+
+    const [topUsers] = await conn.query<TopUserStat[]>(
+      `SELECT 
+         COALESCE(u.username, 'Khách lẻ') AS username,
+         u.email,
+         COUNT(o.order_id) AS order_count,
+         COALESCE(SUM(o.total), 0) AS total_spent
+       FROM orders o
+       LEFT JOIN users u ON o.id = u.id
+       ${whereClause}
+       GROUP BY o.id, u.username, u.email
+       ORDER BY order_count DESC
+       LIMIT 5`,
+      queryParams
+    );
+
+    const [topProducts] = await conn.query<TopProductStat[]>(
+      `SELECT 
+         m.name,
+         m.image_url,
+         SUM(oi.quantity) AS sold_count,
+         SUM(oi.quantity * oi.price) AS revenue
+       FROM order_items oi
+       JOIN menu m ON oi.menu_id = m.menu_id
+       JOIN orders o ON oi.order_id = o.order_id
+       ${whereClause}
+       GROUP BY m.menu_id, m.name, m.image_url
+       ORDER BY sold_count DESC
+       LIMIT 5`,
+      queryParams
+    );
+
+    res.json({
+      summary: {
+        orderCount,
+        productCount,
+        revenue,
+      },
+      categoryChart: categoryStats.map(row => ({
+        label: row.label,
+        order_count: Number(row.order_count),
+      })),
+      topUsers: topUsers.map(row => ({
+        username: row.username,
+        email: row.email,
+        order_count: Number(row.order_count),
+        total_spent: Number(row.total_spent),
+      })),
+      topProducts: topProducts.map(row => ({
+        name: row.name,
+        image_url: row.image_url || "/images/placeholder.jpg",
+        sold_count: Number(row.sold_count),
+        revenue: Number(row.revenue),
+      })),
+    });
+  } catch (error) {
+    console.error("Lỗi lấy thống kê:", error);
+    res.status(500).json({ message: "Lỗi server khi lấy thống kê" });
+  } finally {
+    conn.release();
+  }
+});
+
+>>>>>>> admin
 app.post("/api/signup", async (req: Request, res: Response) => {
   const { username, email, password } = req.body;
 

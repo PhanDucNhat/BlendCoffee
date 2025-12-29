@@ -9,7 +9,9 @@ import {
   Edit,
   Trash2,
   X,
+  House,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface MenuItem {
   menu_id: number;
@@ -26,6 +28,8 @@ interface MenuItem {
 interface Category {
   category_id: number;
   category_name: string;
+  status: number;
+  display: number;
 }
 
 interface ApiMenuItem {
@@ -377,6 +381,30 @@ export default function AdminMenu() {
     await fetchData();
   };
 
+  const handleExportToExcel = () => {
+    const data = menuItems.map((item) => ({
+      ID: item.menu_id,
+      "Tên món": item.name,
+      "Mô tả": item.description || "",
+      "Danh mục": item.category_name,
+      "Giá size nhỏ (đ)": item.prices.Small || "-",
+      "Giá size trung bình (đ)": item.prices.Medium || "-",
+      "Giá size lớn (đ)": item.prices.Large || "-",
+      "Trạng thái": item.status === 1 ? "Kích hoạt" : "Tắt",
+      "URL ảnh": item.image_url ? `http://localhost:5000${item.image_url}` : "",
+    }));
+
+    if (data.length === 0) {
+      alert("Không có dữ liệu để xuất!");
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Menu");
+    XLSX.writeFile(workbook, "Menu_BlendCoffee.xlsx");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -404,15 +432,9 @@ export default function AdminMenu() {
               <li className="inline-flex items-center">
                 <Link
                   to="/admin/dashboard"
-                  className="hover:text-gray-900 flex items-center"
+                  className="hover:text-gray-900 flex items-center gap-2"
                 >
-                  <svg
-                    className="w-4 h-4 mr-1.5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
-                  </svg>
+                  <House className="h-4 w-4" />
                   Trang chủ
                 </Link>
               </li>
@@ -442,12 +464,12 @@ export default function AdminMenu() {
             >
               <Plus className="w-4 h-4" /> Thêm mới
             </button>
-            <a
-              href="#"
+            <button
+              onClick={handleExportToExcel}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
             >
-              <Download className="w-4 h-4" /> Xuất
-            </a>
+              <Download className="w-4 h-4" /> Xuất Excel
+            </button>
           </div>
         </div>
       </div>
@@ -550,9 +572,9 @@ export default function AdminMenu() {
                       onChange={(e) => setSelectedSize(e.target.value)}
                       className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-cyan-500 focus:border-cyan-500"
                     >
-                      <option value="Small">Small</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Large">Large</option>
+                      <option value="Small">Nhỏ</option>
+                      <option value="Medium">Trung bình</option>
+                      <option value="Large">Lớn</option>
                     </select>
                   </div>
                 </th>
@@ -604,10 +626,11 @@ export default function AdminMenu() {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
                     {item.prices[selectedSize] !== undefined
-                      ? `${item.prices[selectedSize].toLocaleString("vi-VN")} đ`
+                      ? `${item.prices[selectedSize]} đ`
                       : "-"}
                   </td>
                   <td className="px-4 py-3">
+<<<<<<< HEAD
                     {/* <span
                       className={`inline-flex items-center gap-1 text-xs font-medium ${
                         item.status ? "text-green-700" : "text-red-700"
@@ -628,6 +651,16 @@ export default function AdminMenu() {
                         onChange={() => handleToggleStatus(item.menu_id)}
                         className="peer appearance-none w-11 h-5 bg-slate-100 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
                       />
+=======
+                    <div className="relative inline-block w-11 h-5">
+                      <input
+                        checked={localStatuses[item.menu_id] || false}
+                        id={`switch-${item.menu_id}`}
+                        type="checkbox"
+                        onChange={() => handleToggleStatus(item.menu_id)}
+                        className="peer appearance-none w-11 h-5 bg-slate-100 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
+                      />
+>>>>>>> admin
                       <label
                         htmlFor={`switch-${item.menu_id}`}
                         className="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-slate-800 cursor-pointer"
@@ -721,11 +754,17 @@ export default function AdminMenu() {
                         className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                       >
                         <option value="">Chọn danh mục</option>
-                        {categories.map((cat) => (
-                          <option key={cat.category_id} value={cat.category_id}>
-                            {cat.category_name}
-                          </option>
-                        ))}
+                        {categories
+                          .filter((cat) => cat.status === 1)
+                          .sort((a, b) => a.display - b.display)
+                          .map((cat) => (
+                            <option
+                              key={cat.category_id}
+                              value={cat.category_id}
+                            >
+                              {cat.category_name}
+                            </option>
+                          ))}
                       </select>
                     </div>
                     <div className="col-span-6">
@@ -784,22 +823,6 @@ export default function AdminMenu() {
                         className="mt-2 block w-full text-sm text-gray-900 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-600 file:text-white hover:file:bg-cyan-700"
                       />
 
-                      {/* {imagePreview && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImagePreview("");
-                            const input = document.querySelector(
-                              'input[type="file"]'
-                            ) as HTMLInputElement;
-                            if (input) input.value = "";
-                          }}
-                          className="mt-2 text-xs text-red-600 hover:text-red-800"
-                        >
-                          Xóa ảnh
-                        </button>
-                      )} */}
-
                       <p className="mt-1 text-xs text-gray-500">
                         PNG, JPG, JPEG (tối đa 5MB)
                       </p>
@@ -821,43 +844,43 @@ export default function AdminMenu() {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <label className="text-xs font-medium text-gray-700 block mb-1">
-                            Small
+                            Nhỏ
                           </label>
                           <input
                             name="price_small"
                             type="number"
-                            step="0.01"
+                            step="0.500"
                             min="0"
                             required
-                            placeholder="0.00"
+                            placeholder="0.000"
                             className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                           />
                         </div>
                         <div>
                           <label className="text-xs font-medium text-gray-700 block mb-1">
-                            Medium
+                            Trung bình
                           </label>
                           <input
                             name="price_medium"
                             type="number"
-                            step="0.01"
+                            step="0.500"
                             min="0"
                             required
-                            placeholder="0.00"
+                            placeholder="0.000"
                             className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                           />
                         </div>
                         <div>
                           <label className="text-xs font-medium text-gray-700 block mb-1">
-                            Large
+                            Lớn
                           </label>
                           <input
                             name="price_large"
                             type="number"
-                            step="0.01"
+                            step="0.500"
                             min="0"
                             required
-                            placeholder="0.00"
+                            placeholder="0.000"
                             className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                           />
                         </div>
@@ -880,7 +903,7 @@ export default function AdminMenu() {
                     </label>
                   </div>
                 </div>
-                <div className="flex items-center p-3 py-1 border-t border-gray-200 rounded-b space-x-2">
+                <div className="flex justify-end p-3 py-1 border-t border-gray-200 rounded-b space-x-2">
                   <button
                     type="submit"
                     className="text-white bg-cyan-600 hover:bg-cyan-700 focus:ring-4 focus:ring-cyan-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
@@ -946,11 +969,25 @@ export default function AdminMenu() {
                         required
                         className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                       >
+<<<<<<< HEAD
                         {categories.map((cat) => (
                           <option key={cat.category_id} value={cat.category_id}>
                             {cat.category_name}
                           </option>
                         ))}
+=======
+                        {categories
+                          .filter((cat) => cat.status === 1)
+                          .sort((a, b) => a.display - b.display)
+                          .map((cat) => (
+                            <option
+                              key={cat.category_id}
+                              value={cat.category_id}
+                            >
+                              {cat.category_name}
+                            </option>
+                          ))}
+>>>>>>> admin
                       </select>
                     </div>
                     <div className="col-span-6">
@@ -1035,10 +1072,10 @@ export default function AdminMenu() {
                             <input
                               name={`price_${size.toLowerCase()}`}
                               type="number"
-                              step="0.01"
+                              step="0.500"
                               min="0"
                               defaultValue={editingItem.prices[size] || ""}
-                              placeholder="0.00"
+                              placeholder="0.000"
                               className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                             />
                           </div>
@@ -1063,7 +1100,7 @@ export default function AdminMenu() {
                   </div>
                 </div>
 
-                <div className="flex items-center p-3 py-1 border-t border-gray-200 rounded-b space-x-2">
+                <div className="flex justify-end p-3 py-1 border-t border-gray-200 rounded-b space-x-2">
                   <button
                     type="submit"
                     className="text-white bg-cyan-600 hover:bg-cyan-700 focus:ring-4 focus:ring-cyan-200 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
@@ -1113,18 +1150,20 @@ export default function AdminMenu() {
                 <h3 className="text-xl font-normal text-gray-500 mt-5 mb-6">
                   Bạn có chắc muốn xóa <strong>{deletingItem.name}</strong>?
                 </h3>
-                <button
-                  onClick={handleDelete}
-                  className="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-base inline-flex items-center px-3 py-2.5 text-center mr-2"
-                >
-                  Yes, I'm sure
-                </button>
-                <button
-                  onClick={closeModals}
-                  className="text-gray-900 bg-white hover:bg-gray-100 focus:ring-4 focus:ring-cyan-200 border border-gray-200 font-medium inline-flex items-center rounded-lg text-base px-3 py-2.5 text-center"
-                >
-                  No, cancel
-                </button>
+                <div className="mt-6 flex justify-center gap-4">
+                  <button
+                    onClick={handleDelete}
+                    className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Xóa
+                  </button>
+                  <button
+                    onClick={closeModals}
+                    className="px-6 py-2.5 bg-gray-200 rounded-lg hover:bg-gray-300"
+                  >
+                    Hủy
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1150,20 +1189,20 @@ export default function AdminMenu() {
                   ></path>
                 </svg>
                 <h3 className="text-xl font-normal text-gray-500 mt-5 mb-6">
-                  Bạn có chắc muốn xóa{" "}
+                  Bạn có chắc muốn xóa
                   <strong>{selectedItems.length} món ăn đã chọn không</strong>?
                 </h3>
                 <button
                   onClick={handleBulkDelete}
                   className="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-base inline-flex items-center px-3 py-2.5 text-center mr-2"
                 >
-                  Yes, I'm sure
+                  Xóa
                 </button>
                 <button
                   onClick={() => setShowBulkDeleteModal(false)}
                   className="text-gray-900 bg-white hover:bg-gray-100 focus:ring-4 focus:ring-cyan-200 border border-gray-200 font-medium inline-flex items-center rounded-lg text-base px-3 py-2.5 text-center"
                 >
-                  No, cancel
+                  Hủy
                 </button>
               </div>
             </div>

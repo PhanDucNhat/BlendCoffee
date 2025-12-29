@@ -159,7 +159,11 @@ const printOrder: React.FC<PrintOrderProps> = ({ order }) => {
                                 {item.name}
                               </div>
                               <div className="text-xs text-gray-500">
+<<<<<<< HEAD
                                 {item.price.toFixed(2)}đ
+=======
+                                {item.price.toFixed(3)}đ
+>>>>>>> admin
                               </div>
                             </div>
                           </div>
@@ -171,7 +175,11 @@ const printOrder: React.FC<PrintOrderProps> = ({ order }) => {
                           {item.quantity}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
+<<<<<<< HEAD
                           {totalPrice.toFixed(2)}đ
+=======
+                          {totalPrice.toFixed(3)}đ
+>>>>>>> admin
                         </td>
                       </tr>
                     );
@@ -184,6 +192,7 @@ const printOrder: React.FC<PrintOrderProps> = ({ order }) => {
               <div className="lg:col-span-4">
                 <div className="space-y-3 text-sm">
                   <div className="grid grid-cols-2 gap-1 max-w-xs ml-auto">
+<<<<<<< HEAD
                     <span className="text-black text-right">Subtotal:</span>
                     <span className="text-right">{subtotal.toFixed(2)}đ</span>
                     <span className="text-black text-right">Delivery:</span>
@@ -195,13 +204,32 @@ const printOrder: React.FC<PrintOrderProps> = ({ order }) => {
                     <span className="text-black text-right">Discount:</span>
                     <span className="text-right">
                       {discount === 0 ? "0.00đ" : `-${discount.toFixed(2)}đ`}
+=======
+                    <span className="text-black text-right">Thành tiền:</span>
+                    <span className="text-right">{subtotal.toFixed(3)}đ</span>
+                    <span className="text-black text-right">Vận chuyển:</span>
+                    <span className="text-right">
+                      {deliveryFee === 0
+                        ? "Miễn phí"
+                        : `${deliveryFee.toFixed(3)}đ`}
+                    </span>
+                    <span className="text-black text-right">Giảm giá:</span>
+                    <span className="text-right">
+                      {discount === 0 ? "0đ" : `-${discount.toFixed(3)}đ`}
+>>>>>>> admin
                     </span>
                   </div>
                   <hr className="border-gray-600 max-w-80 ml-auto" />
                   <div className="grid grid-cols-2 max-w-xs ml-auto text-lg font-bold">
+<<<<<<< HEAD
                     <span className="text-right">TOTAL:</span>
                     <span className="text-right drop-shadow glow">
                       {total.toFixed(2)}đ
+=======
+                    <span className="text-right">Tổng tiền:</span>
+                    <span className="text-right drop-shadow glow">
+                      {total.toFixed(3)}đ
+>>>>>>> admin
                     </span>
                   </div>
                 </div>
