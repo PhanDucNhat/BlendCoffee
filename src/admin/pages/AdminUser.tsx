@@ -9,13 +9,9 @@ import {
   Edit,
   Trash2,
   X,
-<<<<<<< HEAD
-} from "lucide-react";
-=======
   House,
 } from "lucide-react";
 import * as XLSX from "xlsx";
->>>>>>> admin
 
 interface UserItem {
   id: number;
@@ -223,8 +219,6 @@ export default function AdminUser() {
     }
   };
 
-<<<<<<< HEAD
-=======
   const handleExportToExcel = () => {
     const dataToExport = filteredUsers.map((user) => ({
       ID: user.id,
@@ -251,7 +245,6 @@ export default function AdminUser() {
     XLSX.writeFile(workbook, `NhanSu_BlendCoffee_${today}.xlsx`);
   };
 
->>>>>>> admin
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -278,21 +271,9 @@ export default function AdminUser() {
             <li className="inline-flex items-center">
               <Link
                 to="/admin/dashboard"
-<<<<<<< HEAD
-                className="hover:text-gray-900 flex items-center"
-              >
-                <svg
-                  className="w-4 h-4 mr-1.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
-                </svg>
-=======
                 className="hover:text-gray-900 flex items-center gap-2"
               >
                 <House className="h-4 w-4" />
->>>>>>> admin
                 Trang chủ
               </Link>
             </li>
@@ -300,11 +281,7 @@ export default function AdminUser() {
               <span className="mx-1">/</span> Quản lý nhân sự
             </li>
             <li>
-<<<<<<< HEAD
-              <span className="mx-1">/</span>{" "}
-=======
               <span className="mx-1">/</span>
->>>>>>> admin
               <span className="text-gray-400">Danh sách</span>
             </li>
           </ol>
@@ -327,21 +304,12 @@ export default function AdminUser() {
             >
               <Plus className="w-4 h-4" /> Thêm mới
             </button>
-<<<<<<< HEAD
-            <a
-              href="#"
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
-            >
-              <Download className="w-4 h-4" /> Xuất
-            </a>
-=======
             <button
               onClick={handleExportToExcel}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
             >
               <Download className="w-4 h-4" /> Xuất Excel
             </button>
->>>>>>> admin
           </div>
         </div>
       </div>
@@ -349,11 +317,7 @@ export default function AdminUser() {
         <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-cyan-900">
-<<<<<<< HEAD
-              Đã chọn <strong>{selectedItems.length}</strong> bài viết
-=======
               Đã chọn <strong>{selectedItems.length}</strong> nhân sự
->>>>>>> admin
             </span>
             <button
               onClick={() => setSelectedItems([])}
@@ -390,27 +354,16 @@ export default function AdminUser() {
                   ID
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-<<<<<<< HEAD
-                  Username
-=======
                   Tên tài khoản
->>>>>>> admin
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
                   Email
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-<<<<<<< HEAD
-                  Role
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  Created_at
-=======
                   Phân quyền
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
                   Ngày tạo
->>>>>>> admin
                 </th>
                 <th className="pr-16 py-3 text-right text-xs font-medium text-gray-500">
                   Hành động
@@ -456,12 +409,6 @@ export default function AdminUser() {
                     <button
                       onClick={() => {
                         setEditingItem(user);
-<<<<<<< HEAD
-                        // setImagePreview(
-                        //   blog.image_url ? `${blog.image_url}` : ""
-                        // );
-=======
->>>>>>> admin
                         setShowEditModal(true);
                       }}
                       className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-cyan-600 rounded hover:bg-cyan-700"
@@ -528,11 +475,7 @@ export default function AdminUser() {
                   <div className="grid grid-cols-6 gap-6 text-left">
                     <div className="sm:col-span-3">
                       <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                        Fullname
-=======
                         Tên tài khoản
->>>>>>> admin
                       </label>
                       <input
                         name="username"
@@ -543,11 +486,7 @@ export default function AdminUser() {
                     </div>
                     <div className="sm:col-span-3">
                       <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                        Role
-=======
                         Phân quyền
->>>>>>> admin
                       </label>
                       <select
                         name="role"
@@ -574,11 +513,7 @@ export default function AdminUser() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                      Password
-=======
                       Mật khẩu
->>>>>>> admin
                     </label>
                     <input
                       name="password"
@@ -626,11 +561,7 @@ export default function AdminUser() {
                   <div className="grid grid-cols-6 gap-6 text-left">
                     <div className="sm:col-span-3">
                       <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                        Fullname
-=======
                         Tên tài khoản
->>>>>>> admin
                       </label>
                       <input
                         name="username"
@@ -643,11 +574,7 @@ export default function AdminUser() {
                     </div>
                     <div className="sm:col-span-3">
                       <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                        Role
-=======
                         Phân quyền
->>>>>>> admin
                       </label>
                       <select
                         name="role"
@@ -710,11 +637,7 @@ export default function AdminUser() {
                 </svg>
               </div>
               <h3 className="mt-5 text-xl font-normal text-gray-700">
-<<<<<<< HEAD
-                Bạn có chắc muốn xóa bài viết{" "}
-=======
                 Bạn có chắc muốn xóa nhân sự có tên tài khoản
->>>>>>> admin
                 <strong>"{deletingItem.username}"</strong>?
               </h3>
               <div className="mt-6 flex justify-center gap-4">
@@ -751,11 +674,7 @@ export default function AdminUser() {
                 </svg>
               </div>
               <h3 className="mt-5 text-xl font-normal text-gray-700">
-<<<<<<< HEAD
-                Xóa <strong>{selectedItems.length}</strong> bài viết đã chọn?
-=======
                 Xóa <strong>{selectedItems.length}</strong> nhân sự đã chọn?
->>>>>>> admin
               </h3>
               <div className="mt-6 flex justify-center gap-4">
                 <button

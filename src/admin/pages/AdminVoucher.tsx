@@ -9,13 +9,9 @@ import {
   Edit,
   Trash2,
   X,
-<<<<<<< HEAD
-} from "lucide-react";
-=======
   House,
 } from "lucide-react";
 import * as XLSX from "xlsx";
->>>>>>> admin
 
 interface voucherItem {
   voucher_id: number;
@@ -321,8 +317,6 @@ export default function AdminVoucher() {
     }
   };
 
-<<<<<<< HEAD
-=======
   const handleExportToExcel = () => {
     const dataToExport = filteredVouchers.map((voucher) => ({
       ID: voucher.voucher_id,
@@ -354,7 +348,6 @@ export default function AdminVoucher() {
     XLSX.writeFile(workbook, `Voucher_BlendCoffee_${today}.xlsx`);
   };
 
->>>>>>> admin
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -381,21 +374,9 @@ export default function AdminVoucher() {
             <li className="inline-flex items-center">
               <Link
                 to="/admin/dashboard"
-<<<<<<< HEAD
-                className="hover:text-gray-900 flex items-center"
-              >
-                <svg
-                  className="w-4 h-4 mr-1.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
-                </svg>
-=======
                 className="hover:text-gray-900 flex items-center gap-2"
               >
                 <House className="h-4 w-4" />
->>>>>>> admin
                 Trang chủ
               </Link>
             </li>
@@ -427,21 +408,12 @@ export default function AdminVoucher() {
             >
               <Plus className="w-4 h-4" /> Thêm mới
             </button>
-<<<<<<< HEAD
-            <a
-              href="#"
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
-            >
-              <Download className="w-4 h-4" /> Xuất
-            </a>
-=======
             <button
               onClick={handleExportToExcel}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
             >
               <Download className="w-4 h-4" /> Xuất Excel
             </button>
->>>>>>> admin
           </div>
         </div>
       </div>
@@ -787,11 +759,7 @@ export default function AdminVoucher() {
                           type="number"
                           min="1"
                           required
-<<<<<<< HEAD
-                          placeholder="0"
-=======
                           placeholder="1"
->>>>>>> admin
                           className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                         />
                       </div>
@@ -816,16 +784,10 @@ export default function AdminVoucher() {
                         <input
                           name="discount_value"
                           type="number"
-<<<<<<< HEAD
-                          min="1"
-                          required
-                          placeholder="0.00"
-=======
                           step="0.500"
                           min="1"
                           required
                           placeholder="1.000"
->>>>>>> admin
                           className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                         />
                       </div>
@@ -1035,16 +997,10 @@ export default function AdminVoucher() {
                           name="discount_value"
                           type="number"
                           defaultValue={editingItem.discount_value}
-<<<<<<< HEAD
-                          min="1"
-                          required
-                          placeholder="0.00"
-=======
                           step="0.500"
                           min="1"
                           required
                           placeholder="1.000"
->>>>>>> admin
                           className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                         />
                       </div>

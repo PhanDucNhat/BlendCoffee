@@ -630,19 +630,6 @@ export default function AdminMenu() {
                       : "-"}
                   </td>
                   <td className="px-4 py-3">
-<<<<<<< HEAD
-                    {/* <span
-                      className={`inline-flex items-center gap-1 text-xs font-medium ${
-                        item.status ? "text-green-700" : "text-red-700"
-                      }`}
-                    >
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          item.status ? "bg-green-500" : "bg-red-500"
-                        }`}
-                      />
-                      {item.status ? "Active" : "Inactive"}
-                    </span> */}
                     <div className="relative inline-block w-11 h-5">
                       <input
                         checked={localStatuses[item.menu_id] || false}
@@ -651,16 +638,6 @@ export default function AdminMenu() {
                         onChange={() => handleToggleStatus(item.menu_id)}
                         className="peer appearance-none w-11 h-5 bg-slate-100 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
                       />
-=======
-                    <div className="relative inline-block w-11 h-5">
-                      <input
-                        checked={localStatuses[item.menu_id] || false}
-                        id={`switch-${item.menu_id}`}
-                        type="checkbox"
-                        onChange={() => handleToggleStatus(item.menu_id)}
-                        className="peer appearance-none w-11 h-5 bg-slate-100 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
-                      />
->>>>>>> admin
                       <label
                         htmlFor={`switch-${item.menu_id}`}
                         className="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-slate-800 cursor-pointer"
@@ -969,13 +946,6 @@ export default function AdminMenu() {
                         required
                         className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-full p-2.5"
                       >
-<<<<<<< HEAD
-                        {categories.map((cat) => (
-                          <option key={cat.category_id} value={cat.category_id}>
-                            {cat.category_name}
-                          </option>
-                        ))}
-=======
                         {categories
                           .filter((cat) => cat.status === 1)
                           .sort((a, b) => a.display - b.display)
@@ -987,7 +957,6 @@ export default function AdminMenu() {
                               {cat.category_name}
                             </option>
                           ))}
->>>>>>> admin
                       </select>
                     </div>
                     <div className="col-span-6">

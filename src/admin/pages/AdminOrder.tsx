@@ -15,10 +15,6 @@ import {
   Download,
   AlertCircle,
   Edit,
-<<<<<<< HEAD
-  Trash2,
-=======
->>>>>>> admin
   X,
   Layers2,
   Clock,
@@ -31,15 +27,10 @@ import {
   Phone,
   MapPin,
   Ticket,
-<<<<<<< HEAD
-} from "lucide-react";
-import { PrintOrder } from "..";
-=======
   House,
 } from "lucide-react";
 import { PrintOrder } from "..";
 import * as XLSX from "xlsx";
->>>>>>> admin
 
 type OrderStatus = "pending" | "processing" | "completed" | "canceled";
 type FilterStatus = OrderStatus | "all";
@@ -88,10 +79,6 @@ const sizeOptions: ("Small" | "Medium" | "Large")[] = [
   "Medium",
   "Large",
 ];
-<<<<<<< HEAD
-=======
-
->>>>>>> admin
 const statusInfo = {
   completed: {
     label: "Đã giao",
@@ -698,8 +685,6 @@ export default function AdminOrder() {
     }
   };
 
-<<<<<<< HEAD
-=======
   const handleExportToExcel = () => {
     const dataToExport = filteredOrders.map((order) => {
       const itemsList = order.items
@@ -746,7 +731,6 @@ export default function AdminOrder() {
     XLSX.writeFile(workbook, `DonHang_BlendCoffee_${today}.xlsx`);
   };
 
->>>>>>> admin
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -773,21 +757,9 @@ export default function AdminOrder() {
             <li className="inline-flex items-center">
               <Link
                 to="/admin/dashboard"
-<<<<<<< HEAD
-                className="hover:text-gray-900 flex items-center"
-              >
-                <svg
-                  className="w-4 h-4 mr-1.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
-                </svg>
-=======
                 className="hover:text-gray-900 flex items-center gap-2"
               >
                 <House className="h-4 w-4" />
->>>>>>> admin
                 Trang chủ
               </Link>
             </li>
@@ -818,21 +790,12 @@ export default function AdminOrder() {
             >
               <Plus className="w-4 h-4" /> Thêm mới
             </button>
-<<<<<<< HEAD
-            <a
-              href="#"
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
-            >
-              <Download className="w-4 h-4" /> Xuất
-            </a>
-=======
             <button
               onClick={handleExportToExcel}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
             >
               <Download className="w-4 h-4" /> Xuất Excel
             </button>
->>>>>>> admin
           </div>
         </div>
       </div>
@@ -982,14 +945,6 @@ export default function AdminOrder() {
               </svg>
               Hủy đơn
             </button>
-<<<<<<< HEAD
-
-            <button className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition flex items-center gap-2">
-              <Trash2 className="w-4 h-4" />
-              Xóa ({selectedItems.length})
-            </button>
-=======
->>>>>>> admin
           </div>
         </div>
       )}
@@ -1071,12 +1026,6 @@ export default function AdminOrder() {
                     {new Date(order.created_at).toLocaleDateString("vi-VN")}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
-<<<<<<< HEAD
-                    {order.total.toFixed(2)}đ
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {order.payment_method}
-=======
                     {order.total.toFixed(3)}đ
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900 font-bold italic">
@@ -1090,7 +1039,6 @@ export default function AdminOrder() {
                         order.payment_method
                       );
                     })()}
->>>>>>> admin
                   </td>
                   <td className="px-4 py-3">
                     {(() => {
@@ -1333,13 +1281,8 @@ export default function AdminOrder() {
                                     {item.price
                                       ? `${parseFloat(
                                           String(item.price)
-<<<<<<< HEAD
-                                        ).toFixed(2)}đ`
-                                      : "0.00đ"}
-=======
                                         ).toFixed(3)}đ`
                                       : "0đ"}
->>>>>>> admin
                                   </p>
                                 </div>
                               ))}
@@ -1453,13 +1396,8 @@ export default function AdminOrder() {
                                         return totalPrice
                                           ? `${parseFloat(
                                               String(totalPrice)
-<<<<<<< HEAD
-                                            ).toFixed(2)}đ`
-                                          : "0.00đ";
-=======
                                             ).toFixed(3)}đ`
                                           : "0.000đ";
->>>>>>> admin
                                       })()}
                                     </p>
                                     <button
@@ -1507,24 +1445,6 @@ export default function AdminOrder() {
                           <div className="space-y-3 text-sm">
                             <div className="grid grid-cols-2 gap-1 max-w-xs ml-auto">
                               <span className="text-gray-400 text-right">
-<<<<<<< HEAD
-                                Subtotal
-                              </span>
-                              <span className="text-right">
-                                {subtotal.toFixed(2)}đ
-                              </span>
-                              <span className="text-gray-400 text-right">
-                                Delivery
-                              </span>
-                              <span className="text-right">
-                                {deliveryFee.toFixed(2)}đ
-                              </span>
-                              <span className="text-gray-400 text-right">
-                                Discount
-                              </span>
-                              <span className="text-right text-green-500 font-medium">
-                                -{discount.toFixed(2)}đ
-=======
                                 Thành tiền
                               </span>
                               <span className="text-right">
@@ -1546,20 +1466,13 @@ export default function AdminOrder() {
                                 {discount === 0
                                   ? "0đ"
                                   : `${discount.toFixed(3)}đ`}
->>>>>>> admin
                               </span>
                             </div>
                             <hr className="border-gray-600 max-w-xs ml-auto" />
                             <div className="grid grid-cols-2 max-w-xs ml-auto text-lg font-bold">
-<<<<<<< HEAD
-                              <span className="text-right">TOTAL</span>
-                              <span className="text-right text-yellow-400 drop-shadow glow">
-                                {total.toFixed(2)}đ
-=======
                               <span className="text-right">Tổng tiền</span>
                               <span className="text-right text-yellow-600 drop-shadow glow">
                                 {total.toFixed(3)}đ
->>>>>>> admin
                               </span>
                             </div>
                           </div>
@@ -1570,11 +1483,7 @@ export default function AdminOrder() {
                       <div className="grid grid-cols-6 gap-6 text-left">
                         <div className="sm:col-span-3">
                           <label className="flex text-sm font-medium text-gray-900 mb-2">
-<<<<<<< HEAD
-                            Fullname
-=======
                             Tên người nhận
->>>>>>> admin
                             <Asterisk className="text-red-600 h-3 w-3"></Asterisk>
                           </label>
                           <input
@@ -1586,11 +1495,7 @@ export default function AdminOrder() {
                         </div>
                         <div className="sm:col-span-3">
                           <label className="flex text-sm font-medium text-gray-900 mb-2">
-<<<<<<< HEAD
-                            Phone
-=======
                             Số điện thoại
->>>>>>> admin
                             <Asterisk className="text-red-600 h-3 w-3"></Asterisk>
                           </label>
                           <input
@@ -1604,11 +1509,7 @@ export default function AdminOrder() {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <label className="text-xs font-medium text-gray-700 block mb-1">
-<<<<<<< HEAD
-                            City
-=======
                             Tỉnh/thành phố
->>>>>>> admin
                           </label>
                           <select
                             required
@@ -1634,11 +1535,7 @@ export default function AdminOrder() {
                         </div>
                         <div>
                           <label className="text-xs font-medium text-gray-700 block mb-1">
-<<<<<<< HEAD
-                            District
-=======
                             Quận/huyện
->>>>>>> admin
                           </label>
                           <select
                             required
@@ -1664,11 +1561,7 @@ export default function AdminOrder() {
                         </div>
                         <div>
                           <label className="text-xs font-medium text-gray-700 block mb-1">
-<<<<<<< HEAD
-                            Ward
-=======
                             Phường/xã
->>>>>>> admin
                           </label>
                           <select
                             required
@@ -1698,11 +1591,7 @@ export default function AdminOrder() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                          Address
-=======
                           Địa chỉ chi tiết
->>>>>>> admin
                         </label>
                         <input
                           type="text"
@@ -1715,11 +1604,7 @@ export default function AdminOrder() {
                       <div>
                         <div className="flex">
                           <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                            Note
-=======
                             Ghi chú đơn hàng
->>>>>>> admin
                           </label>
                           <p className="text-gray-400 text-sm italic pl-2">
                             (Không bắt buộc)
@@ -1734,11 +1619,7 @@ export default function AdminOrder() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-900 block mb-2">
-<<<<<<< HEAD
-                          Payment method
-=======
                           Phương thức thanh toán
->>>>>>> admin
                         </label>
                         <div className="space-y-3">
                           <label className="flex items-center gap-3 cursor-pointer">
@@ -1751,11 +1632,7 @@ export default function AdminOrder() {
                               onChange={() => setPaymentMethod("cash")}
                             />
                             <span className="text-sm">
-<<<<<<< HEAD
-                              Cash on Delivery (COD)
-=======
                               Thanh toán khi nhận hàng (COD)
->>>>>>> admin
                             </span>
                           </label>
                           <label className="flex items-center gap-3 cursor-pointer">
@@ -1767,11 +1644,7 @@ export default function AdminOrder() {
                               checked={paymentMethod === "bank_transfer"}
                               onChange={() => setPaymentMethod("bank_transfer")}
                             />
-<<<<<<< HEAD
-                            <span className="text-sm">VNPay</span>
-=======
                             <span className="text-sm">Thanh toán quaVNPay</span>
->>>>>>> admin
                           </label>
                         </div>
                       </div>
@@ -1862,11 +1735,7 @@ export default function AdminOrder() {
                       </p>
                     </div>
                     <p className="font-bold text-lg my-auto">
-<<<<<<< HEAD
-                      {item.price.toFixed(2)}đ
-=======
                       {item.price.toFixed(3)}đ
->>>>>>> admin
                     </p>
                   </div>
                 ))}
@@ -1884,11 +1753,7 @@ export default function AdminOrder() {
                           (sum, item) => sum + item.price * item.quantity,
                           0
                         )
-<<<<<<< HEAD
-                        .toFixed(2)}
-=======
                         .toFixed(3)}
->>>>>>> admin
                       đ
                     </span>
                   </div>
@@ -1907,20 +1772,12 @@ export default function AdminOrder() {
                         {detailOrder.voucher_code &&
                           `(${detailOrder.voucher_code})`}
                       </span>
-<<<<<<< HEAD
-                      <span>-{detailOrder.discount.toFixed(2)}</span>
-=======
                       <span>-{detailOrder.discount.toFixed(3)}</span>
->>>>>>> admin
                     </div>
                   )}
                   <div className="pt-3 border-t border-gray-700 flex justify-between text-lg font-bold text-yellow-600">
                     <span>Thành tiền</span>
-<<<<<<< HEAD
-                    <span>{detailOrder.total.toFixed(2)}đ</span>
-=======
                     <span>{detailOrder.total.toFixed(3)}đ</span>
->>>>>>> admin
                   </div>
                 </div>
               </div>

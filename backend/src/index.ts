@@ -5,22 +5,12 @@ import bcrypt from "bcrypt"; //mã hóa mk
 import jwt from "jsonwebtoken"; //xác thực users
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { PoolConnection } from "mysql2/promise";
-<<<<<<< HEAD
-
-=======
 import { startOfDay, endOfDay } from "date-fns";
->>>>>>> admin
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { error } from "console";
-<<<<<<< HEAD
-// import { use } from "react";
-// import { ReceiptEuroIcon } from "lucide-react";
-// import { error } from "console";
-=======
->>>>>>> admin
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -144,8 +134,6 @@ interface AddressItem extends RowDataPacket {
   is_default: 1 | 0;
 }
 
-<<<<<<< HEAD
-=======
 interface OrderStatusCount extends RowDataPacket {
   status: string;
   count: number;
@@ -175,7 +163,6 @@ interface SummaryStats extends RowDataPacket {
   revenue: number | null;
 }
 
->>>>>>> admin
 const fetchCartDetails = async (conn: PoolConnection, userId: number) => {
   const [cartRows] = await conn.query<RowDataPacket[]>(
     "SELECT cart_id FROM cart WHERE id = ?",
@@ -246,18 +233,6 @@ interface AuthRequest extends Request {
   };
 }
 
-<<<<<<< HEAD
-// interface BlogItem extends RowDataPacket {
-//   blog_id: number;
-//   title: string;
-//   description: string | null;
-//   image_url: string | null;
-//   post_date: string;
-//   comments_count: number;
-// }
-
-=======
->>>>>>> admin
 const app = express();
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -521,8 +496,6 @@ app.delete("/api/admin/voucher/bulk-delete", async (req: Request, res: Response)
   }
 });
 
-<<<<<<< HEAD
-=======
 app.get("/api/categories", async (req, res) => {
   try {
     const [rows] = await db.query("SELECT * FROM menu_category");
@@ -642,7 +615,6 @@ app.delete("/api/admin/category/bulk-delete", async (req: Request, res: Response
 });
 
 
->>>>>>> admin
 app.get("/api/menu", async (req: Request, res: Response) => {
   try {
     const [rows] = await db.query(`
@@ -982,23 +954,6 @@ app.get("/api/blog", async (req: Request, res: Response) => {
   }
 });
 
-<<<<<<< HEAD
-// app.get("/api/admin/blog", async (req: Request, res: Response) => {
-//   try {
-//     const [rows] = await db.query<BlogItem[]>(
-//       `SELECT blog_id, title, description, image_url, post_date, comments_count 
-//        FROM blog 
-//        ORDER BY post_date DESC`
-//     );
-//     res.json(rows);
-//   } catch (error) {
-//     console.error("Lỗi khi truy vấn blog:", error);
-//     res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
-//   }
-// });
-
-=======
->>>>>>> admin
 app.post("/api/admin/blog/add", upload.single("image"), async (req: Request, res: Response) => {
   const { title, description } = req.body;
   const image_url = req.file ? `/images/${req.file.filename}` : null;
@@ -1992,19 +1947,11 @@ app.post("/api/change-password", authenticateToken, async (req: AuthRequest, res
   const { oldPassword, newPassWord } = req.body;
 
   if (!oldPassword || !newPassWord) {
-<<<<<<< HEAD
-    return res.status(400).json({ mesage: "Vui lòng nhập đầy đủ mật khẩu cũ và mới" });
-  }
-
-  if (newPassWord.length < 6) {
-    return res.status(400).json({ mesage: "Mật khẩu mới phải có ít nhất 6 ký tự" });
-=======
     return res.status(400).json({ message: "Vui lòng nhập đầy đủ mật khẩu cũ và mới" });
   }
 
   if (newPassWord.length < 6) {
     return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự" });
->>>>>>> admin
   }
 
   try {
@@ -2210,8 +2157,6 @@ app.delete("/api/addresses/delete/:id", authenticateToken, async (req: AuthReque
   }
 });
 
-<<<<<<< HEAD
-=======
 app.get("/api/admin/dashboard-stats", async (req: Request, res: Response) => {
   try {
     const today = new Date();
@@ -2390,7 +2335,6 @@ app.get("/api/admin/statistics", async (req: Request, res: Response) => {
   }
 });
 
->>>>>>> admin
 app.post("/api/signup", async (req: Request, res: Response) => {
   const { username, email, password } = req.body;
 

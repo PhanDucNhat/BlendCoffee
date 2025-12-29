@@ -95,8 +95,6 @@ export default function AdminSidebar() {
           <i className="fa-solid fa-clipboard-list mr-3 w-5"></i>
           Quản lý đơn hàng
         </Link>
-<<<<<<< HEAD
-=======
         <Link
           to="/admin/statistical"
           className="flex items-center hover:bg-gray-700 p-2 rounded transition"
@@ -104,7 +102,6 @@ export default function AdminSidebar() {
           <i className="fa-solid fa-chart-bar mr-3 w-5"></i>
           Báo cáo thống kê
         </Link>
->>>>>>> admin
       </nav>
 
       <div className="p-4 space-y-3 overflow-y-auto">

@@ -4,18 +4,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-<<<<<<< HEAD
-  Download,
-=======
->>>>>>> admin
   AlertCircle,
   Edit,
   Trash2,
   X,
-<<<<<<< HEAD
-=======
   House,
->>>>>>> admin
 } from "lucide-react";
 
 interface BlogItem {
@@ -260,21 +253,9 @@ export default function AdminBlog() {
             <li className="inline-flex items-center">
               <Link
                 to="/admin/dashboard"
-<<<<<<< HEAD
-                className="hover:text-gray-900 flex items-center"
-              >
-                <svg
-                  className="w-4 h-4 mr-1.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
-                </svg>
-=======
                 className="hover:text-gray-900 flex items-center gap-2"
               >
                 <House className="h-4 w-4" />
->>>>>>> admin
                 Trang chủ
               </Link>
             </li>
@@ -306,15 +287,6 @@ export default function AdminBlog() {
             >
               <Plus className="w-4 h-4" /> Thêm mới
             </button>
-<<<<<<< HEAD
-            <a
-              href="#"
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
-            >
-              <Download className="w-4 h-4" /> Xuất
-            </a>
-=======
->>>>>>> admin
           </div>
         </div>
       </div>

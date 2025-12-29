@@ -6,9 +6,6 @@ export { default as AdminUser } from "./pages/AdminUser";
 export { default as AdminVoucher } from "./pages/AdminVoucher";
 export { default as AdminOrder } from "./pages/AdminOrder";
 export { default as PrintOrder } from "./pages/PrintOrder";
-<<<<<<< HEAD
-=======
 export { default as AdminStatistical } from "./pages/AdminStatistical";
 export { default as AdminCategory } from "./pages/AdminCategory";
 
->>>>>>> admin

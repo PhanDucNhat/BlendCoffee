@@ -31,20 +31,14 @@ import Address from "./pages/user/Addresses";
 import {
   AdminLayout,
   Dashboard,
-<<<<<<< HEAD
-=======
   AdminCategory,
->>>>>>> admin
   AdminMenu,
   AdminBlog,
   AdminUser,
   AdminVoucher,
   AdminOrder,
   PrintOrder,
-<<<<<<< HEAD
-=======
   AdminStatistical,
->>>>>>> admin
 } from "./admin";
 import React from "react";
 
@@ -113,10 +107,6 @@ const AppContent: React.FC = () => {
         <Route path="/order" element={<Order />} />
         <Route path="/changepassword" element={<Change />} />
         <Route path="/addresses" element={<Address />} />
-<<<<<<< HEAD
-        {/* <Route path="/singleproduct" element={<SingleProduct />} /> */}
-=======
->>>>>>> admin
         <Route path="/singleproduct/:id" element={<SingleProduct />} />
         <Route path="/login" element={<Login />} />
         <Route
@@ -135,10 +125,7 @@ const AppContent: React.FC = () => {
           <Route path="voucher" element={<AdminVoucher />} />
           <Route path="order" element={<AdminOrder />} />
           <Route path="order/print/:orderId" element={<PrintOrder />} />
-<<<<<<< HEAD
-=======
           <Route path="statistical" element={<AdminStatistical />} />
->>>>>>> admin
         </Route>
       </Routes>
 
