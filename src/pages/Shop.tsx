@@ -60,14 +60,14 @@ const Shop: React.FC = () => {
         }}
       >
         <div className="relative z-10 text-center text-white px-6">
-          <h1 className="text-5xl font-bold mb-4 mt-10">ORDER ONLINE</h1>
+          <h1 className="text-5xl font-bold mb-4 mt-10">Đặt hàng</h1>
           <p className="text-lg">
             <span className="mr-2 text-gray-300">
               <a href="/" className="hover:text-white transition">
-                Home
+                Trang chủ
               </a>
             </span>
-            <span className="text-[#b6894b]">/ Shop</span>
+            <span className="text-[#b6894b]">/ Đặt hàng</span>
           </p>
         </div>
       </section>
@@ -119,16 +119,16 @@ const Shop: React.FC = () => {
                       {item.name}
                     </h3>
                     <p className="text-xl font-bold text-white mb-4">
-                      $
                       {item.price
-                        ? parseFloat(String(item.price)).toFixed(2)
-                        : "0.00"}
+                        ? parseFloat(String(item.price)).toFixed(3)
+                        : "0.000"}
+                      đ
                     </p>
                     <button
                       onClick={() => handleSingleProduct(item.menu_id)}
                       className="border border-yellow-600 text-yellow-600 px-6 py-2 rounded-md hover:bg-yellow-600 hover:text-black transition text-sm font-medium"
                     >
-                      Add to cart
+                      Đặt hàng ngay
                     </button>
                   </div>
                 </div>

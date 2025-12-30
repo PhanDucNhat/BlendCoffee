@@ -15,25 +15,25 @@ const Banner: React.FC = () => {
       id: 1,
       url: "/images/bg_1.jpg",
       title: "Welcome",
-      subtitle: "THE BEST COFFEE TESTING EXPERIENCE",
+      subtitle: "TRẢI NGHIỆM THỬ CÀ PHÊ TUYỆT VỜI NHẤT",
       description:
-        "A small river named Duden flows by their place and supplies it with the necessary regelialia.",
+        "Một con sông Duden chảy qua nơi họ ở và cung cấp cho họ những nhu yếu phẩm cần thiết.",
     },
     {
       id: 2,
       url: "/images/bg_2.jpg",
       title: "Welcome",
-      subtitle: "FRESHLY ROASTED BEANS EVERYDAY",
+      subtitle: "CÀ PHÊ RANG TƯƠI MỖI NGÀY",
       description:
-        "Our coffee is freshly roasted to perfection to give you the richest flavor.",
+        "Cà phê của chúng tôi được rang tươi hoàn hảo để mang đến cho bạn hương vị đậm đà nhất.",
     },
     {
       id: 3,
       url: "/images/bg_3.jpg",
       title: "Welcome",
-      subtitle: "ENJOY YOUR COFFEE MOMENT",
+      subtitle: "HÃY TẬN HƯỞNG KHOẢNH KHẮC CÀ PHÊ CỦA BẠN",
       description:
-        "Take a break and savor your favorite cup with the perfect aroma and taste.",
+        "Hãy thưởng thức tách cà phê yêu thích của bạn với hương thơm và vị ngon hoàn hảo.",
     },
   ];
 
@@ -75,10 +75,10 @@ const Banner: React.FC = () => {
             </p>
             <div className="flex gap-4">
               <button className="bg-[#b6894b] text-white px-6 py-3 rounded-sm text-sm uppercase tracking-wider hover:bg-[#a6783d] transition">
-                Order Now
+                Đặt hàng ngay
               </button>
               <button className="border border-white px-6 py-3 rounded-sm text-sm uppercase tracking-wider hover:bg-white hover:text-black transition">
-                View Menu
+                Xem thực đơn
               </button>
             </div>
           </div>

@@ -210,8 +210,8 @@ export default function OrderPage() {
                           </div>
                           <div className="text-xs text-gray-400 mt-1">
                             {order.payment_method === "cash"
-                              ? "Thanh toán khi nhận hàng"
-                              : "Chuyển khoản"}
+                              ? "Thanh toán khi nhận hàng (COD)"
+                              : "Chuyển khoản qua VNPay"}
                           </div>
                         </div>
 
@@ -226,7 +226,7 @@ export default function OrderPage() {
                           </div>
                           <div className="text-right">
                             <div className="font-bold text-yellow-400">
-                              {f(order.total)}
+                              {order.total}đ
                             </div>
                           </div>
                           <button
@@ -274,7 +274,7 @@ export default function OrderPage() {
                                 </div>
                               </div>
                               <p className="font-medium">
-                                {item.price.toFixed(2)}đ
+                                {item.price.toFixed(3)}đ
                               </p>
                             </div>
                           ))}
@@ -368,7 +368,7 @@ export default function OrderPage() {
                       </p>
                     </div>
                     <p className="font-bold text-lg">
-                      {item.price.toFixed(2)}đ
+                      {item.price.toFixed(3)}đ
                     </p>
                   </div>
                 ))}
@@ -383,7 +383,7 @@ export default function OrderPage() {
                     <span>
                       {detailOrder.items
                         .reduce((sum, item) => sum + item.price, 0)
-                        .toFixed(2)}
+                        .toFixed(3)}
                       đ
                     </span>
                   </div>
@@ -392,7 +392,8 @@ export default function OrderPage() {
                     <span>
                       {(detailOrder.delivery_fee || 0) === 0
                         ? "Miễn phí"
-                        : f(detailOrder.delivery_fee!)}
+                        : detailOrder.delivery_fee!}
+                      đ
                     </span>
                   </div>
                   {detailOrder.discount && detailOrder.discount > 0 && (
@@ -407,7 +408,7 @@ export default function OrderPage() {
                   )}
                   <div className="pt-3 border-t border-gray-700 flex justify-between text-lg font-bold text-yellow-400">
                     <span>Thành tiền</span>
-                    <span>{f(detailOrder.total)}</span>
+                    <span>{detailOrder.total}đ</span>
                   </div>
                 </div>
               </div>

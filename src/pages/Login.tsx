@@ -93,7 +93,7 @@ const LoginForm: React.FC = () => {
           </button>
 
           <h2 className="text-3xl font-semibold text-center flex-1 text-gray-900">
-            {isLoginMode ? "Login" : "Sign Up"}
+            {isLoginMode ? "Đăng nhập" : "Đăng ký"}
           </h2>
           <div className="w-[80px]" />
         </div>
@@ -105,7 +105,7 @@ const LoginForm: React.FC = () => {
             }`}
             onClick={() => setIsLoginMode(true)}
           >
-            Login
+            Đăng nhập
           </button>
           <button
             className={`w-1/2 text-lg font-medium transition-all z-10 ${
@@ -113,7 +113,7 @@ const LoginForm: React.FC = () => {
             }`}
             onClick={() => setIsLoginMode(false)}
           >
-            Signup
+            Đăng ký
           </button>
           <div
             className={`absolute top-0 h-full w-1/2 rounded-full bg-gradient-to-r from-blue-700 via-cyan-600 to-cyan-200 transition-all duration-300 ${
@@ -126,7 +126,7 @@ const LoginForm: React.FC = () => {
           {!isLoginMode && (
             <input
               type="text"
-              placeholder="Name"
+              placeholder="Tên tài khoản"
               required
               className="w-full p-3 border-b-2 border-gray-300 outline-none focus:border-cyan-500 placeholder-gray-400"
               name="username"
@@ -137,7 +137,7 @@ const LoginForm: React.FC = () => {
 
           <input
             type="email"
-            placeholder="Email Address"
+            placeholder="Email"
             required
             className="w-full p-3 border-b-2 border-gray-300 outline-none focus:border-cyan-500 placeholder-gray-400"
             name="email"
@@ -147,7 +147,7 @@ const LoginForm: React.FC = () => {
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="Password"
+              placeholder="Mật khẩu"
               required
               className="w-full p-3 border-b-2 border-gray-300 outline-none focus:border-cyan-500 placeholder-gray-400 pr-12"
               name="password"
@@ -170,19 +170,17 @@ const LoginForm: React.FC = () => {
           {isLoginMode && (
             <div className="text-right">
               <a href="#" className="text-cyan-600 hover:underline text-sm">
-                Forgot password?
+                Quên mật khẩu?
               </a>
             </div>
           )}
 
           <button className="w-full p-3 bg-gradient-to-r from-blue-700 via-cyan-600 to-cyan-200 text-white rounded-full text-lg font-medium hover:opacity-90 transition">
-            {isLoginMode ? "Login" : "Signup"}
+            {isLoginMode ? "Đăng nhập" : "Đăng ký"}
           </button>
 
           <p className="text-center text-gray-600 text-sm">
-            {isLoginMode
-              ? "Don't have an account?"
-              : "Already have an account?"}{" "}
+            {isLoginMode ? "Chưa có tài khoản?" : "Đã có tài khoản?"}{" "}
             <a
               href="#"
               onClick={(e) => {
@@ -192,7 +190,7 @@ const LoginForm: React.FC = () => {
               }}
               className="text-cyan-600 hover:underline"
             >
-              {isLoginMode ? "Signup now" : "Login"}
+              {isLoginMode ? "Đăng ký ngay" : "Đăng nhập"}
             </a>
           </p>
         </form>

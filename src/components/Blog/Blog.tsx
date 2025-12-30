@@ -43,11 +43,11 @@ const Blog: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-14">
           <h2 className="text-3xl md:text-5xl font-bold uppercase mb-4">
-            Recent from blog
+            Bài đăng mới nhất
           </h2>
           <p className="text-gray-400 max-w-2xl mx-auto">
-            Far far away, behind the word mountains, far from the countries
-            Vokalia and Consonantia, there live the blind texts.
+            Xa thật xa, phía sau những ngọn núi chữ, cách xa các quốc gia
+            Vokalia và Consonantia, có những đoạn văn mù mịt sinh sống.
           </p>
         </div>
 

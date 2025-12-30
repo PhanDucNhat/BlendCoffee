@@ -18,6 +18,18 @@ interface CartItem {
   quantity: number;
 }
 
+interface AddressItem {
+  address_id: number;
+  id: number;
+  fullname: string;
+  phone: string;
+  detail_address: string;
+  ward: string;
+  district: string;
+  city: string;
+  is_default: 1 | 0;
+}
+
 const Checkout: React.FC = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +54,8 @@ const Checkout: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [discount, setDiscount] = useState(0);
+  const [addresses, setAddresses] = useState<AddressItem[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
 
   const navigate = useNavigate();
 
@@ -49,7 +63,7 @@ const Checkout: React.FC = () => {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  const delivery = 0.0;
+  const delivery: number = 0;
   const total = subtotal + delivery - discount;
 
   const fetchCart = async () => {
@@ -204,6 +218,79 @@ const Checkout: React.FC = () => {
     }
   };
 
+  const fetchAddresses = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch("http://localhost:5000/api/addresses", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Không thể tải địa chỉ");
+      const data: AddressItem[] = await res.json();
+      setAddresses(data);
+      const defaultAddr = data.find((address) => address.is_default === 1);
+      if (defaultAddr) {
+        setSelectedAddressId(String(defaultAddr.address_id));
+        fillAddressForm(defaultAddr);
+      }
+    } catch (err) {
+      console.error("Lỗi tải sổ địa chỉ:", err);
+    }
+  };
+
+  const fillAddressForm = async (address: AddressItem) => {
+    setFullName(address.fullname);
+    setPhone(address.phone);
+    setAddress(address.detail_address);
+
+    const province = provinces.find((p) => p.Name === address.city);
+    if (province) {
+      setProvince(province);
+
+      const district = province.Districts.find(
+        (d) => d.Name === address.district
+      );
+      if (district) {
+        setDistrict(district);
+
+        const ward = district.Wards.find((w) => w.Name === address.ward);
+        setWard(ward || null);
+      } else {
+        setDistrict(null);
+        setWard(null);
+      }
+    } else {
+      setProvince(null);
+      setDistrict(null);
+      setWard(null);
+    }
+  };
+
+  const handleAddressSelect = async (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const value = e.target.value;
+    setSelectedAddressId(value);
+
+    if (value === "") {
+      setFullName("");
+      setPhone("");
+      setAddress("");
+      setProvince(null);
+      setDistrict(null);
+      setWard(null);
+      return;
+    }
+
+    const selectedAddress = addresses.find(
+      (address) => address.address_id === Number(value)
+    );
+    if (selectedAddress) {
+      fillAddressForm(selectedAddress);
+    }
+  };
+
   useEffect(() => {
     fetchCart();
 
@@ -212,6 +299,7 @@ const Checkout: React.FC = () => {
       .catch((err) => {
         console.error("Lỗi tải tỉnh/thành:", err);
       });
+    fetchAddresses();
   }, []);
 
   if (loading) {
@@ -237,31 +325,38 @@ const Checkout: React.FC = () => {
             <div className="lg:col-span-2 bg-gray-900 p-6 rounded-lg border border-gray-800">
               <div className="flex justify-between">
                 <h2 className="text-2xl font-bold uppercase mb-6">
-                  Billing Details
+                  Chi tiết thanh toán
                 </h2>
                 <div className="flex">
                   <label className="text-sm font-medium text-white block mt-2 mr-2">
                     Sổ địa chỉ
                   </label>
                   <select
-                    name="role"
-                    required
+                    value={selectedAddressId}
+                    onChange={handleAddressSelect}
                     className="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-cyan-600 focus:border-cyan-600 block w-60 p-2 h-10"
                   >
                     <option value="">-- Địa chỉ khác --</option>
-                    <option value="admin">
-                      6 P. Lê Văn Thiêm, Thanh Xuân Trung, Thanh Xuân, Hà Nội
-                    </option>
-                    <option value="employee">
-                      28 Ng. 17 P. Nam Dư, Lĩnh Nam, Hoàng Mai, Hà Nội
-                    </option>
+                    {addresses.map((address) => (
+                      <option
+                        key={address.address_id}
+                        value={address.address_id}
+                      >
+                        {address.fullname} - {address.phone} |
+                        {address.detail_address}, {address.ward},
+                        {address.district}, {address.city}
+                        {address.is_default === 1 && " (Mặc định)"}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
               <form className="space-y-6 text-left">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-white">
                   <div>
-                    <label className="block text-sm mb-1">Full Name</label>
+                    <label className="block text-sm mb-1">
+                      Họ tên người nhận
+                    </label>
                     <input
                       type="text"
                       className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-500 focus:border-white outline-none"
@@ -271,7 +366,7 @@ const Checkout: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm mb-1">Phone</label>
+                    <label className="block text-sm mb-1">Số điện thoại</label>
                     <input
                       type="text"
                       className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-500 focus:border-white outline-none"
@@ -283,7 +378,7 @@ const Checkout: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm mb-1">Province</label>
+                    <label className="block text-sm mb-1">Tỉnh/Thành phố</label>
                     <select
                       className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white appearance-none"
                       value={province?.Id ?? ""}
@@ -311,9 +406,7 @@ const Checkout: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm mb-1">
-                      District (optional)
-                    </label>
+                    <label className="block text-sm mb-1">Quận/Huyện</label>
                     <select
                       className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white appearance-none"
                       value={district?.Id ?? ""}
@@ -338,9 +431,7 @@ const Checkout: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm mb-1">
-                      Ward/commune (optional)
-                    </label>
+                    <label className="block text-sm mb-1">Phường/Xã</label>
                     <select
                       className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white appearance-none"
                       value={ward?.Id ?? ""}
@@ -367,7 +458,7 @@ const Checkout: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm mb-1">
-                      Address (optional)
+                      Địa chỉ chi tiết
                     </label>
                     <input
                       type="text"
@@ -380,7 +471,7 @@ const Checkout: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-sm mb-1">Note</label>
+                    <label className="block text-sm mb-1">Ghi chú</label>
                     <input
                       type="text"
                       className="w-full bg-gray-800 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-500"
@@ -399,14 +490,29 @@ const Checkout: React.FC = () => {
                     onChange={(e) => setAddToAddressBook(e.target.checked)}
                   />
                   <span className="text-xs text-gray-300">
-                    Add to register address
+                    Lưu địa chỉ này vào sổ địa chỉ của tôi
                   </span>
+                </div>
+
+                <div className="text-xs text-gray-400 leading-relaxed space-y-2">
+                  <p>
+                    Chúng tôi cam kết bảo mật tuyệt đối thông tin cá nhân và địa
+                    chỉ của bạn. Dữ liệu chỉ được sử dụng cho mục đích giao hàng
+                    và cải thiện trải nghiệm mua sắm, không chia sẻ cho bất kỳ
+                    bên thứ ba nào mà không có sự đồng ý của bạn.
+                  </p>
+                  <p className="text-cyan-300 text-xs italic">
+                    Mẹo: Hãy đặt một địa chỉ thường dùng làm mặc định để hệ
+                    thống tự động điền thông tin khi bạn thanh toán lần sau!
+                  </p>
                 </div>
               </form>
             </div>
             <div className="space-y-8">
               <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
-                <h3 className="text-xl font-bold uppercase mb-4">Cart Total</h3>
+                <h3 className="text-xl font-bold uppercase mb-4">
+                  Đơn hàng của bạn
+                </h3>
                 <hr className="my-4 border-gray-700" />
                 <div className="space-y-4">
                   {cartItems.map((item) => (
@@ -433,7 +539,7 @@ const Checkout: React.FC = () => {
                         </div>
                       </div>
                       <div className="text-right font-medium whitespace-nowrap">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        {(item.price * item.quantity).toFixed(3)}đ
                       </div>
                     </div>
                   ))}
@@ -468,27 +574,29 @@ const Checkout: React.FC = () => {
                 <hr className="my-4 border-gray-700" />
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span className="text-gray-400">Thành tiền</span>
+                    <span>{subtotal.toFixed(3)}đ</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Delivery</span>
-                    <span>${delivery.toFixed(2)}</span>
+                    <span className="text-gray-400">Vận chuyển</span>
+                    <span>
+                      {delivery === 0 ? "Miễn phí" : `${delivery.toFixed(3)}đ`}
+                    </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Discount</span>
-                    <span>${discount.toFixed(2)}</span>
+                    <span className="text-gray-400">Giảm giá</span>
+                    <span>{discount.toFixed(3)}đ</span>
                   </div>
                 </div>
                 <hr className="my-4 border-gray-700" />
                 <div className="flex justify-between text-lg font-bold">
-                  <span>TOTAL</span>
-                  <span className="text-yellow-500">${total.toFixed(2)}</span>
+                  <span>TỔNG TIỀN</span>
+                  <span className="text-yellow-500">{total.toFixed(3)}đ</span>
                 </div>
               </div>
               <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
                 <h3 className="text-xl font-bold uppercase mb-4">
-                  Payment Method
+                  Phương thức thanh toán
                 </h3>
                 <div className="space-y-3">
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -500,7 +608,9 @@ const Checkout: React.FC = () => {
                       checked={paymentMethod === "cash"}
                       onChange={() => setPaymentMethod("cash")}
                     />
-                    <span className="text-sm">Cash on Delivery (COD)</span>
+                    <span className="text-sm">
+                      Thanh toán khi nhận hàng (COD)
+                    </span>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
@@ -511,7 +621,7 @@ const Checkout: React.FC = () => {
                       checked={paymentMethod === "bank_transfer"}
                       onChange={() => setPaymentMethod("bank_transfer")}
                     />
-                    <span className="text-sm">VNPay</span>
+                    <span className="text-sm">Thanh toán qua VNPay</span>
                   </label>
                 </div>
 
@@ -523,7 +633,7 @@ const Checkout: React.FC = () => {
                     onChange={(e) => setAcceptTerms(e.target.checked)}
                   />
                   <span className="text-xs text-gray-300">
-                    I have read and accept the terms and conditions
+                    Tôi đã đọc và đồng ý với các điều khoản và điều kiện
                   </span>
                 </label>
 
@@ -536,7 +646,7 @@ const Checkout: React.FC = () => {
                   onClick={handlePlaceOrder}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Đang xử lý..." : "Place an order"}
+                  {isSubmitting ? "Đang xử lý..." : "Đặt hàng"}
                 </button>
               </div>
             </div>

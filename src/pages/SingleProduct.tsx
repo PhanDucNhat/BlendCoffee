@@ -135,20 +135,20 @@ const SingleProduct: React.FC = () => {
   return (
     <>
       <section
-        className="relative h-[80vh] bg-cover bg-center flex items-center justify-center"
+        className="relative h-[40vh] bg-cover bg-center flex items-center justify-center"
         style={{
           backgroundImage: "url('/images/bg_3.jpg')",
         }}
       >
         <div className="relative z-10 text-center text-white px-6">
-          <h1 className="text-5xl font-bold mb-4 mt-10">PRODUCT DETAIL</h1>
+          <h1 className="text-5xl font-bold mb-4 mt-10">CHI TIẾT SẢN PHẨM</h1>
           <p className="text-lg">
             <span className="mr-2 text-gray-300">
               <a href="/" className="hover:text-white transition">
-                Home
+                Trang chủ
               </a>
             </span>
-            <span className="text-[#b6894b]">/ Product Detail</span>
+            <span className="text-[#b6894b]">/ Chi tiết sản phẩm</span>
           </p>
         </div>
       </section>
@@ -172,7 +172,7 @@ const SingleProduct: React.FC = () => {
               <h1 className="text-3xl font-bold uppercase">{product.name}</h1>
 
               <p className="text-3xl font-bold text-yellow-500">
-                ${currentPrice.toFixed(3)}
+                {currentPrice.toFixed(3)}đ
               </p>
 
               <div className="text-gray-400 text-sm space-y-4">
@@ -197,7 +197,7 @@ const SingleProduct: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 max-w-xs">
-                <p className="text-xl mb-2 text-gray-200">Quantity :</p>
+                <p className="text-xl mb-2 text-gray-200">Số lượng :</p>
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   className="w-10 h-10 bg-gray-800 border border-gray-700 rounded-md hover:bg-gray-700 transition"
@@ -258,7 +258,7 @@ const SingleProduct: React.FC = () => {
                 }}
                 className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-3 px-8 rounded-md uppercase transition"
               >
-                Add to Cart
+                Thêm vào giỏ hàng
               </button>
             </div>
           </div>
@@ -311,16 +311,16 @@ const SingleProduct: React.FC = () => {
                       {item.name}
                     </h3>
                     <p className="text-xl font-bold text-white mb-4">
-                      $
                       {item.price
-                        ? parseFloat(String(item.price)).toFixed(2)
-                        : "0.00"}
+                        ? parseFloat(String(item.price)).toFixed(3)
+                        : "0.000"}
+                      đ
                     </p>
                     <button
                       onClick={() => handleSingleProduct(item.menu_id)}
                       className="border border-yellow-600 text-yellow-600 px-6 py-2 rounded-md hover:bg-yellow-600 hover:text-black transition text-sm font-medium"
                     >
-                      Add to cart
+                      Xem chi tiết
                     </button>
                   </div>
                 </div>

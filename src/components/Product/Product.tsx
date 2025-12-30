@@ -24,7 +24,7 @@ const Product: React.FC = () => {
 
         const data: Product[] = await response.json();
 
-        const allowedCategories = ["Desserts", "Drinks", "Main Dish"];
+        const allowedCategories = ["Bánh ngọt", "Nước ép", "Món khác"];
 
         const grouped: Record<string, Product[]> = {};
 
@@ -57,13 +57,12 @@ const Product: React.FC = () => {
     <div className="w-full bg-[#0d0d0d] text-white pb-20">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-14">
-          <span className="text-[#b6894b] italic text-2xl">Discover</span>
-          <h2 className="text-4xl md:text-5xl font-extrabold mt-2 mb-4">
-            OUR PRODUCTS
+          <h2 className="text-4xl md:text-5xl font-extrabold mb-4">
+            Sản phẩm nổi bật
           </h2>
           <p className="text-gray-400 max-w-2xl mx-auto">
-            Far far away, behind the word mountains, far from the countries
-            Vokalia and Consonantia, there live the blind texts.
+            Xa thật xa, phía sau những ngọn núi chữ, cách xa các quốc gia
+            Vokalia và Consonantia, có những đoạn văn mù mịt sinh sống.
           </p>
         </div>
 
@@ -98,13 +97,13 @@ const Product: React.FC = () => {
               </h3>
               <p className="text-gray-400 text-sm mb-3">{item.description}</p>
               <p className="text-white font-semibold mb-3">
-                $
                 {item.price
-                  ? parseFloat(String(item.price)).toFixed(2)
-                  : "0.00"}
+                  ? parseFloat(String(item.price)).toFixed(3)
+                  : "0.000"}
+                đ
               </p>
               <button className="border border-[#b6894b] text-[#b6894b] px-5 py-2 text-sm hover:bg-[#b6894b] hover:text-white transition">
-                Add to cart
+                Thêm vào giỏ hàng
               </button>
             </div>
           ))}

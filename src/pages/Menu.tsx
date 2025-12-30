@@ -49,11 +49,11 @@ const MenuHeader: React.FC = () => {
       >
         <div className="absolute inset-0 bg-opacity-60"></div>
         <div className="relative z-10 text-center text-white px-6">
-          <h1 className="text-5xl font-bold mb-4 mt-10">OUR MENU</h1>
+          <h1 className="text-5xl font-bold mb-4 mt-10">MENU</h1>
           <p className="text-lg">
             <span className="mr-2 text-gray-300">
               <a href="/" className="hover:text-white transition">
-                Home
+                Trang chủ
               </a>
             </span>
             <span className="text-[#b6894b]">/ Menu</span>
@@ -108,7 +108,7 @@ const MenuHeader: React.FC = () => {
                         </div>
                         <p className="text-gray-400 text-sm mt-1">
                           {item.description ||
-                            "A small river named Duden flows by their place and supplies"}
+                            "Món ăn ngon đặc trưng của chúng tôi."}
                         </p>
                       </div>
                     </div>

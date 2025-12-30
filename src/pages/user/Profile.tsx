@@ -99,11 +99,9 @@ const Profile: React.FC = () => {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
             <div className="md:col-span-4 text-white space-y-6 text-center">
-              <h2 className="text-2xl font-semibold mb-6">
-                ACCOUNT INFORMATION
-              </h2>
+              <h2 className="text-2xl font-semibold mb-6">THÔNG TIN CÁ NHÂN</h2>
               <div className="text-2xl flex justify-center">
-                <span className="text-gray-400 mr-1">HELLO </span>
+                <span className="text-gray-400 mr-1">XIN CHÀO </span>
                 <p className="font-medium text-[#b6894b] uppercase">
                   {user.username}
                 </p>
@@ -120,7 +118,7 @@ const Profile: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">
-                      Full Name
+                      Họ và tên
                     </label>
                     <p className="text-xl text-orange-300 border-b border-gray-700 pb-2">
                       {user.username}
@@ -128,7 +126,7 @@ const Profile: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">
-                      Phone
+                      Số điện thoại
                     </label>
                     <p className="text-xl text-orange-300 border-b border-gray-700 pb-2">
                       {user.phone || "Chưa cập nhật"}
@@ -147,7 +145,7 @@ const Profile: React.FC = () => {
 
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">
-                    Address
+                    Địa chỉ
                   </label>
                   <p className="text-xl text-orange-300 border-b border-gray-700 pb-2">
                     {user.address || "Chưa cập nhật địa chỉ"}

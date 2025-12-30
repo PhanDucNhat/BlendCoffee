@@ -144,6 +144,7 @@ const Navbar: React.FC = () => {
             <Link
               to="/cart"
               className="relative hover:text-[#b6894b] transition duration-200"
+              title="Giỏ hàng"
             >
               <ShoppingCart className="inline-block w-5 h-5" />
               {cartCount > 0 && (
@@ -171,7 +172,7 @@ const Navbar: React.FC = () => {
                   {user.role === "admin" && (
                     <li>
                       <Link
-                        to="/admin"
+                        to="/admin/dashboard"
                         className="block px-3 py-2 text-sm text-yellow-400 hover:text-yellow-300 hover:bg-[#2a2c2e] transition duration-200 font-medium"
                       >
                         Trang quản trị viên

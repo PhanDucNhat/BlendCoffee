@@ -39,14 +39,14 @@ const Blog = () => {
         }}
       >
         <div className="relative z-10 text-center text-white px-6">
-          <h1 className="text-5xl font-bold mb-4 mt-10">BLOG</h1>
+          <h1 className="text-5xl font-bold mb-4 mt-10">Bài viết</h1>
           <p className="text-lg">
             <span className="mr-2 text-gray-300">
               <a href="/" className="hover:text-white transition">
-                Home
+                Trang chủ
               </a>
             </span>
-            <span className="text-[#b6894b]">/ Blog</span>
+            <span className="text-[#b6894b]">/ Bài viết</span>
           </p>
         </div>
       </section>

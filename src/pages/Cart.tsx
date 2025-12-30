@@ -79,8 +79,8 @@ const Cart: React.FC = () => {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  const delivery = 0.0;
-  const discount = 0.0;
+  const delivery: number = 0;
+  const discount: number = 0;
   const total = subtotal + delivery - discount;
 
   if (loading) {
@@ -122,11 +122,11 @@ const Cart: React.FC = () => {
         <div className="bg-yellow-600 bg-opacity-20 rounded-t-lg p-4 mb-4 hidden md:flex text-sm font-bold">
           <div className="w-12"></div>
           <div className="w-20"></div>
-          <div className="flex-1 pr-10 text-center">Product</div>
+          <div className="flex-1 pr-10 text-center">Sản phẩm</div>
           <div className="pr-[72px]">Size</div>
-          <div className="w-20 text-center pr-[105px]">Price</div>
-          <div className="w-24 text-center pr-24">Quantity</div>
-          <div className="w-20 text-center">Total</div>
+          <div className="w-20 text-center pr-[105px]">Đơn giá</div>
+          <div className="w-24 text-center pr-24">Số lượng</div>
+          <div className="w-20 text-center">Thành tiền</div>
         </div>
 
         {cartItems.map((item) => (
@@ -157,7 +157,7 @@ const Cart: React.FC = () => {
             <div className="w-20 text-center">{item.size}</div>
 
             <div className="w-20 text-center">
-              ${item.price ? Number(item.price).toFixed(2) : "0.00"}
+              {item.price ? Number(item.price).toFixed(3) : "0.000"}đ
             </div>
 
             <div className="w-24 text-center">
@@ -170,38 +170,42 @@ const Cart: React.FC = () => {
             </div>
 
             <div className="w-20 text-center font-bold">
-              ${(item.price * item.quantity).toFixed(2)}
+              {(item.price * item.quantity).toFixed(3)}đ
             </div>
           </div>
         ))}
 
         <div className="flex justify-end mt-8">
           <div className="bg-gray-900 p-6 rounded-lg border border-gray-800 w-full md:w-80">
-            <h3 className="text-lg font-bold uppercase mb-4">Cart Totals</h3>
+            <h3 className="text-lg font-bold uppercase mb-4">
+              Thanh toán tạm tính
+            </h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-400">Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span className="text-gray-400">Thành tiền</span>
+                <span>{subtotal.toFixed(3)}đ</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Delivery</span>
-                <span>${delivery.toFixed(2)}</span>
+                <span className="text-gray-400">Vận chuyển</span>
+                <span>
+                  {delivery === 0 ? "Miễn phí" : `${delivery.toFixed(3)}đ`}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Discount</span>
-                <span>${discount.toFixed(2)}</span>
+                <span className="text-gray-400">Giảm giá</span>
+                <span>{discount.toFixed(3)}đ</span>
               </div>
             </div>
             <hr className="my-4 border-gray-700" />
             <div className="flex justify-between text-lg font-bold">
-              <span>Total</span>
-              <span className="text-yellow-500">${total.toFixed(2)}</span>
+              <span>Tổng tiền</span>
+              <span className="text-yellow-500">{total.toFixed(3)}đ</span>
             </div>
             <button
               onClick={() => navigate("/checkout")}
               className="w-full bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-3 rounded mt-4 uppercase transition"
             >
-              Proceed to Checkout
+              Tiến hành thanh toán
             </button>
           </div>
         </div>

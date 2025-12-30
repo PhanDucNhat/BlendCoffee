@@ -14,15 +14,15 @@ const testimonials: Testimonial[] = [
   {
     id: 1,
     quote:
-      "Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic life One day however a small.",
+      "Ngay cả Pointing toàn năng cũng không thể kiểm soát được những đoạn văn bản mù chữ, đó là một cuộc sống gần như không chính tả. Tuy nhiên, một ngày nọ, một điều nhỏ bé...",
     name: "Louise Kelly",
     position: "Illustrator Designer",
-    image: "images/person_1.jpg",
+    image: "images/person_3.jpg",
   },
   {
     id: 2,
     quote:
-      "Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic life One day however a small line of blind text by the name of Lorem Ipsum decided to leave for the far World of Grammar.",
+      "Ngay cả Pointing toàn năng cũng không thể kiểm soát được những đoạn văn bản vô nghĩa này; đó là một cuộc sống gần như không tuân theo quy tắc chính tả. Tuy nhiên, một ngày nọ, một dòng văn bản vô nghĩa nhỏ bé mang tên Lorem Ipsum quyết định rời đi đến Thế giới Ngữ pháp xa xôi.",
     name: "Louise Kelly",
     position: "Illustrator Designer",
     image: "images/person_2.jpg",
@@ -31,7 +31,7 @@ const testimonials: Testimonial[] = [
   {
     id: 3,
     quote:
-      "Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic life One day however a small line of blind text by the name.",
+      "Ngay cả Pointing toàn năng cũng không thể kiểm soát được những đoạn văn bản mù chữ, đó là một cuộc sống gần như không chính tả. Tuy nhiên, một ngày nọ, một điều nhỏ bé...",
     name: "Louise Kelly",
     position: "Illustrator Designer",
     image: "images/person_3.jpg",
@@ -39,7 +39,7 @@ const testimonials: Testimonial[] = [
   {
     id: 4,
     quote:
-      "Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic life One day however.",
+      "Ngay cả Pointing toàn năng cũng không thể kiểm soát được những đoạn văn bản mù chữ, đó là một cuộc sống gần như không tuân theo quy tắc chính tả. Tuy nhiên, một ngày nọ...",
     name: "Louise Kelly",
     position: "Illustrator Designer",
     image: "images/person_2.jpg",
@@ -48,7 +48,7 @@ const testimonials: Testimonial[] = [
   {
     id: 5,
     quote:
-      "Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic life One day however a small line of blind text by the name.",
+      "Ngay cả Pointing toàn năng cũng không thể kiểm soát được những đoạn văn bản mù chữ, đó là một cuộc sống gần như không chính tả. Tuy nhiên, một ngày nọ, một điều nhỏ bé...",
     name: "Louise Kelly",
     position: "Illustrator Designer",
     image: "images/person_3.jpg",
@@ -65,14 +65,14 @@ const AboutPage: React.FC = () => {
         }}
       >
         <div className="relative z-10 text-center text-white px-6">
-          <h1 className="text-5xl font-bold mb-4 mt-10">OBOUT US</h1>
+          <h1 className="text-5xl font-bold mb-4 mt-10">GIỚI THIỆU</h1>
           <p className="text-lg">
             <span className="mr-2 text-gray-300">
               <a href="/" className="hover:text-white transition">
-                Home
+                Trang chủ
               </a>
             </span>
-            <span className="text-[#b6894b]">/ About</span>
+            <span className="text-[#b6894b]">/ Giới thiệu</span>
           </p>
         </div>
       </section>
@@ -84,12 +84,13 @@ const AboutPage: React.FC = () => {
       >
         <div className="relative container mx-auto px-6 text-center mb-16">
           <span className="text-amber-400 italic text-lg tracking-widest">
-            Testimony
+            ĐÁNH GIÁ CỦA KHÁCH HÀNG
           </span>
           <h2 className="text-4xl font-bold uppercase mt-2">Customers Says</h2>
           <p className="text-gray-300 mt-4 max-w-2xl mx-auto leading-relaxed">
-            Far far away, behind the word mountains, far from the countries
-            Vokalia and Consonantia, there live the blind texts.
+            Những lời chứng thực từ khách hàng của chúng tôi nói lên tất cả về
+            chất lượng và dịch vụ mà Blend Coffee mang lại. Chúng tôi tự hào vì
+            đã tạo ra những trải nghiệm đáng nhớ cho cộng đồng yêu cà phê.
           </p>
         </div>
 

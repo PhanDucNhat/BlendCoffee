@@ -7,10 +7,12 @@ const Footer: React.FC = () => {
       <div className="relative container mx-auto px-6 lg:px-20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-10">
           <div>
-            <h2 className="text-white text-xl font-semibold mb-4">ABOUT US</h2>
+            <h2 className="text-white text-xl font-semibold mb-4">
+              Giới thiệu
+            </h2>
             <p className="text-gray-400 leading-relaxed">
-              Far far away, behind the word mountains, far from the countries
-              Vokalia and Consonantia, there live the blind texts.
+              Xa thật xa, phía sau những ngọn núi chữ, cách xa các quốc gia
+              Vokalia và Consonantia, có những đoạn văn mù mịt sinh sống.
             </p>
             <div className="flex space-x-4 mt-6">
               <a
@@ -36,29 +38,26 @@ const Footer: React.FC = () => {
 
           <div>
             <h2 className="text-white text-xl font-semibold mb-4">
-              RECENT BLOG
+              Bài đăng gần đây
             </h2>
             {[1, 2].map((i) => (
               <div key={i} className="flex items-start mb-5">
                 <div
-                  className="w-20 h-16 bg-cover bg-center rounded mr-4"
+                  className="w-24 h-16 bg-cover bg-center rounded mr-4"
                   style={{
                     backgroundImage: `url(/images/image_${i}.jpg)`,
                   }}
                 ></div>
                 <div>
                   <h3 className="text-gray-200 text-sm font-medium leading-snug hover:text-white cursor-pointer">
-                    Even the all-powerful Pointing has no control about
+                    Ngay cả Pointing toàn năng cũng không thể kiểm soát được
                   </h3>
                   <div className="text-xs text-gray-500 flex flex-wrap gap-3 mt-1">
                     <span>
-                      <i className="fas fa-calendar-alt mr-1"></i> Sept 15, 2018
+                      <i className="fas fa-calendar-alt mr-1"></i>29/12/2025
                     </span>
                     <span>
-                      <i className="fas fa-user mr-1"></i> Admin
-                    </span>
-                    <span>
-                      <i className="fas fa-comments mr-1"></i> 19
+                      <i className="fas fa-comments mr-1"></i>0 Comments
                     </span>
                   </div>
                 </div>
@@ -67,33 +66,36 @@ const Footer: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-white text-xl font-semibold mb-4">SERVICES</h2>
+            <h2 className="text-white text-xl font-semibold mb-4">Dịch vụ</h2>
             <ul className="space-y-2">
-              {["Cooked", "Deliver", "Quality Foods", "Mixed"].map((item) => (
-                <li key={item}>
-                  <a href="#" className="hover:text-white transition">
-                    {item}
-                  </a>
-                </li>
-              ))}
+              {["Xem menu", "Giao hàng", "Thực phẩm chất lượng", "Hỗn hợp"].map(
+                (item) => (
+                  <li key={item}>
+                    <a href="#" className="hover:text-white transition">
+                      {item}
+                    </a>
+                  </li>
+                )
+              )}
             </ul>
           </div>
 
           <div>
             <h2 className="text-white text-xl font-semibold mb-4">
-              HAVE A QUESTIONS?
+              Đặt câu hỏi cho chúng tôi
             </h2>
             <ul className="space-y-3 text-gray-400">
               <li className="flex items-start space-x-3">
                 <i className="fas fa-map-marker-alt mt-1 text-gray-400"></i>
                 <span>
-                  203 Fake St. Mountain View, San Francisco, California, USA
+                  Số 6 đường Lê Văn Thiêm, phường Thanh Xuân Trung, quận Thanh
+                  Xuân, TP. Hà Nội
                 </span>
               </li>
               <li className="flex items-center space-x-3">
                 <i className="fas fa-phone text-gray-400"></i>
                 <a href="#" className="hover:text-white">
-                  +2 392 3929 210
+                  000 (123) 456 7890
                 </a>
               </li>
               <li className="flex items-center space-x-3">

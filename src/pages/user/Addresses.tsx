@@ -273,11 +273,10 @@ const Addresses: React.FC = () => {
       <section className="bg-black py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-            {/* Left profile */}
             <div className="md:col-span-4 text-white space-y-6 text-center">
-              <h2 className="text-2xl font-semibold mb-6">YOUR ADDRESS</h2>
+              <h2 className="text-2xl font-semibold mb-6">ĐỊA CHỈ CỦA TÔI</h2>
               <div className="text-2xl flex justify-center">
-                <span className="text-gray-400 mr-1">HELLO </span>
+                <span className="text-gray-400 mr-1">Xin chào </span>
                 <p className="font-medium text-[#b6894b] uppercase">
                   {user?.username}
                 </p>
@@ -291,7 +290,7 @@ const Addresses: React.FC = () => {
                 onClick={() => setShowAddModal(true)}
                 className="w-40 h-10 bg-yellow-600 hover:bg-yellow-700 text-black font-bold rounded uppercase"
               >
-                Add address
+                Thêm địa chỉ
               </button>
 
               <div className="text-left pt-4 space-y-6">
@@ -308,8 +307,8 @@ const Addresses: React.FC = () => {
                       }`}
                     >
                       <div className="flex-1">
-                        <p className="pb-2">Fullname: {addr.fullname}</p>
-                        <p className="pb-2">Phone: {addr.phone}</p>
+                        <p className="pb-2">Họ tên: {addr.fullname}</p>
+                        <p className="pb-2">Số điện thoại: {addr.phone}</p>
                         <p>
                           {addr.detail_address}, {addr.ward}, {addr.district},{" "}
                           {addr.city}
@@ -326,7 +325,7 @@ const Addresses: React.FC = () => {
                           onClick={() => openEditModal(addr)}
                           className="text-orange-500 hover:text-orange-400 font-medium"
                         >
-                          Update
+                          Cập nhật
                         </button>
                       </div>
                     </div>
@@ -356,7 +355,7 @@ const Addresses: React.FC = () => {
                   <div className="grid grid-cols-6 gap-6">
                     <div className="sm:col-span-3">
                       <label className="text-sm font-medium text-gray-900 block mb-2">
-                        Fullname
+                        Họ tên
                       </label>
                       <input
                         type="text"
@@ -368,7 +367,7 @@ const Addresses: React.FC = () => {
                     </div>
                     <div className="sm:col-span-3">
                       <label className="text-sm font-medium text-gray-900 block mb-2">
-                        Phone
+                        Số điện thoại
                       </label>
                       <input
                         type="text"
@@ -382,7 +381,7 @@ const Addresses: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="text-xs font-medium text-gray-700 block mb-1">
-                        City
+                        Tỉnh/Thành phố
                       </label>
                       <select
                         required
@@ -407,7 +406,7 @@ const Addresses: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-700 block mb-1">
-                        District
+                        Quận/Huyện
                       </label>
                       <select
                         required
@@ -433,7 +432,7 @@ const Addresses: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-700 block mb-1">
-                        Ward
+                        Phường/Xã
                       </label>
                       <select
                         required
@@ -463,7 +462,7 @@ const Addresses: React.FC = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-900 block mb-2">
-                      Address
+                      Địa chỉ chi tiết
                     </label>
                     <input
                       type="text"
@@ -529,7 +528,7 @@ const Addresses: React.FC = () => {
                   <div className="grid grid-cols-6 gap-6 text-left">
                     <div className="sm:col-span-3">
                       <label className="text-sm font-medium text-gray-900 block mb-2">
-                        Fullname
+                        Họ tên
                       </label>
                       <input
                         name="fullname"
@@ -542,7 +541,7 @@ const Addresses: React.FC = () => {
                     </div>
                     <div className="sm:col-span-3">
                       <label className="text-sm font-medium text-gray-900 block mb-2">
-                        Phone
+                        Số điện thoại
                       </label>
                       <input
                         type="text"
@@ -556,7 +555,7 @@ const Addresses: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="text-xs font-medium text-gray-700 block mb-1">
-                        City
+                        Tỉnh/Thành phố
                       </label>
                       <select
                         required
@@ -581,7 +580,7 @@ const Addresses: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-700 block mb-1">
-                        District
+                        Quận/Huyện
                       </label>
                       <select
                         required
@@ -607,7 +606,7 @@ const Addresses: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-700 block mb-1">
-                        Ward
+                        Phường/Xã
                       </label>
                       <select
                         required
@@ -637,7 +636,7 @@ const Addresses: React.FC = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-900 block mb-2">
-                      Address
+                      Địa chỉ chi tiết
                     </label>
                     <input
                       type="text"

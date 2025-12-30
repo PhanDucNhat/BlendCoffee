@@ -10,20 +10,19 @@ const About: React.FC = () => {
       <div className="md:w-1/2 w-full flex items-center bg-black/40 px-10 py-16 md:py-0">
         <div className="max-w-2xl space-y-4 bg-[#363636] p-4">
           <div>
-            <span className="text-[#b6894b] italic text-2xl">Discover</span>
             <h2 className="text-4xl md:text-5xl font-extrabold mt-2 leading-tight">
-              OUR STORY
+              CÂU CHUYỆN CHÚNG TÔI
             </h2>
           </div>
           <p className="text-gray-500 leading-relaxed text-left">
-            On her way she met a copy. The copy warned the Little Blind Text,
-            that where it came from it would have been rewritten a thousand
-            times and everything that was left from its origin would be the word
-            "and" and the Little Blind Text should turn around and return to its
-            own, safe country. But nothing the copy said could convince her and
-            so it didn’t take long until a few insidious Copy Writers ambushed
-            her, made her drunk with Longe and Parole and dragged her into their
-            agency, where they abused her for their.
+            Tại Blend Coffee, chúng tôi tin rằng mỗi tách cà phê đều kể một câu
+            chuyện. Được thành lập vào năm 2010, quán cà phê của chúng tôi đã
+            trở thành điểm đến yêu thích của cộng đồng địa phương, nơi mọi người
+            có thể thưởng thức những ly cà phê tuyệt hảo trong không gian ấm
+            cúng và thân thiện. Chúng tôi tự hào về việc lựa chọn những hạt cà
+            phê chất lượng cao nhất từ các nông trại bền vững trên khắp thế
+            giới, và cam kết mang đến cho khách hàng trải nghiệm cà phê độc đáo
+            và khó quên.
           </p>
         </div>
       </div>

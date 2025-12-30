@@ -120,9 +120,9 @@ const ChangePassword: React.FC = () => {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
             <div className="md:col-span-4 text-white space-y-6 text-center">
-              <h2 className="text-2xl font-semibold mb-6">CHANGE PASSWORD</h2>
+              <h2 className="text-2xl font-semibold mb-6">ĐỔI MẬT KHẨU</h2>
               <div className="text-2xl flex justify-center">
-                <span className="text-gray-400 mr-1">HELLO </span>
+                <span className="text-gray-400 mr-1">Xin chào </span>
                 <p className="font-medium text-[#b6894b] uppercase">
                   {user?.username}
                 </p>
@@ -143,7 +143,7 @@ const ChangePassword: React.FC = () => {
                 <div className="grid grid-cols-1 gap-6">
                   <div className="relative">
                     <div className="block text-sm text-white mb-1">
-                      Old password
+                      Mât khẩu cũ
                     </div>
                     <input
                       type={showOldPassword ? "text" : "password"}
@@ -169,7 +169,7 @@ const ChangePassword: React.FC = () => {
                   </div>
                   <div className="relative">
                     <div className="block text-sm text-white mb-1">
-                      New password
+                      Mât khẩu mới
                     </div>
                     <input
                       type={showNewPassword ? "text" : "password"}
@@ -195,7 +195,7 @@ const ChangePassword: React.FC = () => {
                   </div>
                   <div className="relative">
                     <div className="block text-sm text-white mb-1">
-                      Confirm password
+                      Xác nhận mật khẩu
                     </div>
                     <input
                       type={showConfirmPassword ? "text" : "password"}
