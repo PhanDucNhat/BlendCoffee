@@ -169,7 +169,7 @@ const Navbar: React.FC = () => {
                       {user.username}
                     </p>
                   </li>
-                  {user.role === "admin" && (
+                  {["admin", "employee"].includes(user.role) && (
                     <li>
                       <Link
                         to="/admin/dashboard"
