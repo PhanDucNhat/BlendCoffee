@@ -156,10 +156,10 @@ const OrderDetail: React.FC = () => {
           backgroundImage: "url('/images/bg_2.jpg')",
         }}
       ></div>
-      <div className=" bg-black text-white py-12 px-4 sm:px-6 lg:px-8">
+      <div className=" bg-black text-white py-12">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
-            <h1 className="text-4xl md:text-5xl font-bold uppercase tracking-wide">
+            <h1 className="text-4xl font-bold uppercase">
               Đơn hàng #DH{order.order_id.toString().padStart(6, "0")}
             </h1>
             <p className="text-lg text-gray-400 mt-3">
@@ -168,8 +168,8 @@ const OrderDetail: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              <div className="bg-gray-900 p-6 md:p-8 rounded-xl border border-gray-800 shadow-xl">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-gray-900 p-6 rounded-xl border border-gray-800 shadow-xl">
                 <h2 className="text-xl font-bold mb-6 border-b border-gray-700 pb-4">
                   Sản phẩm đã đặt
                 </h2>
@@ -183,18 +183,18 @@ const OrderDetail: React.FC = () => {
                       <img
                         src={item.image_url || "/images/default.jpg"}
                         alt={item.name}
-                        className="w-20 h-20 rounded-lg object-cover flex-shrink-0 mx-auto sm:mx-0"
+                        className="w-20 h-20 rounded-lg object-cover"
                       />
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-lg md:text-xl">
                           {item.name}
                         </h3>
-                        <p className="text-gray-400 text-sm md:text-base mt-1">
+                        <p className="text-gray-400 text-sm mt-1">
                           Size: <span className="font-medium">{item.size}</span>{" "}
                           × <span className="font-medium">{item.quantity}</span>
                         </p>
                       </div>
-                      <div className="text-right font-bold text-lg md:text-xl whitespace-nowrap">
+                      <div className="text-right font-bold text-lg">
                         {(item.price * item.quantity).toFixed(3)}đ
                       </div>
                     </div>
@@ -231,7 +231,7 @@ const OrderDetail: React.FC = () => {
             <div className="space-y-6">
               <div className="bg-gray-900 p-6 rounded-xl border border-gray-800 shadow-xl">
                 <h3 className="text-xl font-bold mb-3">Trạng thái đơn hàng</h3>
-                <div className="space-y-4 text-sm md:text-base">
+                <div className="space-y-4 text-base">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">
                       Phương thức thanh toán
@@ -243,7 +243,7 @@ const OrderDetail: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Trạng thái</span>
                     <span
-                      className={`px-4 py-1 rounded-full text-xs md:text-sm font-bold ${
+                      className={`px-4 py-1 rounded-full text-sm font-bold ${
                         getStatusInfo().className
                       }`}
                     >
@@ -263,7 +263,7 @@ const OrderDetail: React.FC = () => {
 
               <div className="bg-gray-900 p-6 rounded-xl border border-gray-800 shadow-xl">
                 <h3 className="text-xl font-bold mb-3">Tổng tiền</h3>
-                <div className="space-y-4 text-sm md:text-base">
+                <div className="space-y-4 text-base">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Thành tiền</span>
                     <span>{order.subtotal}đ</span>
@@ -283,7 +283,7 @@ const OrderDetail: React.FC = () => {
                     </div>
                   )}
                   <hr className="my-4 border-gray-700" />
-                  <div className="flex justify-between text-xl md:text-2xl font-bold">
+                  <div className="flex justify-between text-xl font-bold">
                     <span>TỔNG CỘNG</span>
                     <span className="text-yellow-500">{order.total}đ</span>
                   </div>
