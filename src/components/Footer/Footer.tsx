@@ -57,7 +57,7 @@ const Footer: React.FC = () => {
                       <i className="fas fa-calendar-alt mr-1"></i>29/12/2025
                     </span>
                     <span>
-                      <i className="fas fa-comments mr-1"></i>0 Comments
+                      <i className="fas fa-comments mr-1"></i>0
                     </span>
                   </div>
                 </div>

@@ -11,6 +11,9 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { error } from "console";
+import crypto from "crypto";
+import qs from "qs";
+import { vnpayConfig } from "./config/vnpay.config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,6 +56,7 @@ interface CheckoutPayload {
   note?: string;
   voucherCode?: string | null;
   paymentMethod?: "cash" | "bank_transfer";
+  addressBook?: boolean;
 }
 
 interface CartItemRow extends RowDataPacket {
@@ -220,7 +224,7 @@ const validateVoucherActive = (voucher: VoucherRow) => {
 
 const calculateDiscountAmount = (voucher: VoucherRow, subtotal: number) => {
   if (voucher.discount_type === "percent") {
-    return (subtotal * Number(voucher.discount_value)) / 100;
+    return (subtotal * Number(voucher.discount_value)) / 10;
   }
 
   return Number(voucher.discount_value);
@@ -233,11 +237,20 @@ interface AuthRequest extends Request {
   };
 }
 
+
 const app = express();
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
+function sortVnpParams(obj: Record<string, string>): Record<string, string> {
+  const sorted: Record<string, string> = {};
+  const keys = Object.keys(obj).sort();
+  for (const key of keys) {
+    sorted[key] = encodeURIComponent(obj[key]).replace(/%20/g, "+");
+  }
+  return sorted;
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -271,6 +284,78 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
     req.user = decoded as { id: number; role: string };
     next();
   });
+};
+
+const createOrderFromCart = async (
+  conn: PoolConnection,
+  userId: number,
+  payload: CheckoutPayload,
+  voucherId: number | null,
+  discountAmount: number,
+  deliveryFee: number,
+  paymentMethod: "cash" | "bank_transfer"
+): Promise<number> => {
+  const { cartId, items, subtotal } = await fetchCartDetails(conn, userId);
+
+  if (!cartId || items.length === 0) {
+    throw new Error("Giỏ hàng trống");
+  }
+
+  const total = subtotal + deliveryFee - discountAmount;
+
+  const [orderRes] = await conn.query<ResultSetHeader>(
+    `
+    INSERT INTO orders
+      (id, voucher_id, subtotal, delivery_fee, discount, total, payment_method, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+    [
+      userId,
+      voucherId,
+      subtotal,
+      deliveryFee,
+      discountAmount,
+      total,
+      paymentMethod,
+      "pending",
+    ]
+  );
+
+  const orderId = orderRes.insertId;
+
+  const orderItems = items.map((item) => [
+    orderId,
+    item.menu_id,
+    item.size,
+    item.quantity,
+    item.price,
+  ]);
+
+  await conn.query(
+    `INSERT INTO order_items (order_id, menu_id, size, quantity, price) VALUES ?`,
+    [orderItems]
+  );
+
+  const billing = payload.billing;
+
+  await conn.query(
+    `
+    INSERT INTO billing_details
+      (order_id, fullname, address, ward, district, city, phone)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    `,
+    [
+      orderId,
+      billing.fullName,
+      billing.address,
+      billing.wardName ?? null,
+      billing.districtName ?? null,
+      billing.provinceName ?? null,
+      billing.phone,
+    ]
+  );
+
+  return orderId;
 };
 
 // API test kết nối
@@ -1333,16 +1418,16 @@ app.delete("/api/cart/item/:cart_item_id", authenticateToken, async (req: AuthRe
 
 app.post("/api/orders/checkout", authenticateToken, async (req: AuthRequest, res: Response) => {
   const userId = req.user!.id;
-  const { billing, paymentMethod = "cash", voucherCode } = req.body as CheckoutPayload;
+  const payload = req.body as CheckoutPayload;
+  const { billing, paymentMethod = "cash", voucherCode, addressBook } = payload;
 
   if (
-    !billing ||
-    !billing.fullName?.trim() ||
+    !billing?.fullName?.trim() ||
     !billing.phone?.trim() ||
     !billing.address?.trim() ||
     !billing.provinceName?.trim()
   ) {
-    return res.status(400).json({ message: "Thiếu thông tin giao hàng bắt buộc" });
+    return res.status(400).json({ message: "Thiếu thông tin giao hàng" });
   }
 
   const conn = await db.getConnection();
@@ -1351,96 +1436,286 @@ app.post("/api/orders/checkout", authenticateToken, async (req: AuthRequest, res
     await conn.beginTransaction();
 
     const { cartId, items, subtotal } = await fetchCartDetails(conn, userId);
-
     if (!cartId || items.length === 0) {
       await conn.rollback();
       return res.status(400).json({ message: "Giỏ hàng trống" });
     }
 
-    const deliveryFee = 0;
     let discountAmount = 0;
     let voucherId: number | null = null;
 
-    if (voucherCode && voucherCode.trim() !== "") {
+    if (voucherCode) {
       const voucher = await fetchVoucher(conn, voucherCode, true);
-
       if (!voucher || !validateVoucherActive(voucher)) {
         await conn.rollback();
-        return res.status(400).json({ message: "Voucher không hợp lệ hoặc đã hết hạn" });
+        return res.status(400).json({ message: "Voucher không hợp lệ" });
       }
 
-      discountAmount = calculateDiscountAmount(voucher, subtotal);
-      discountAmount = Math.min(discountAmount, subtotal);
+      discountAmount = Math.min(calculateDiscountAmount(voucher, subtotal), subtotal);
       voucherId = voucher.voucher_id;
-
-      await conn.query(
-        "UPDATE voucher SET quantity = quantity - 1 WHERE voucher_id = ?",
-        [voucherId]
-      );
     }
 
+    const deliveryFee = 0;
     const total = subtotal + deliveryFee - discountAmount;
 
-    const [orderResult] = await conn.query<ResultSetHeader>(
-      `INSERT INTO orders
-        (id, voucher_id, subtotal, delivery_fee, discount, total, payment_method, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
+    if (total <= 0) {
+      await conn.rollback();
+      return res.status(400).json({ message: "Tổng tiền không hợp lệ" });
+    }
+
+    if (paymentMethod === "cash") {
+      if (voucherId) {
+        await conn.query(
+          "UPDATE voucher SET quantity = quantity - 1 WHERE voucher_id = ?",
+          [voucherId]
+        );
+      }
+
+      const orderId = await createOrderFromCart(
+        conn,
         userId,
+        payload,
         voucherId,
-        Number(subtotal.toFixed(2)),
+        discountAmount,
         deliveryFee,
-        Number(discountAmount.toFixed(2)),
-        Number(total.toFixed(2)),
-        paymentMethod,
-        "pending",
-      ]
-    );
+        "cash"
+      );
 
-    const orderId = orderResult.insertId;
+      const { cartId } = await fetchCartDetails(conn, userId);
+      if (cartId) {
+        await conn.query("DELETE FROM cart_items WHERE cart_id = ?", [cartId]);
+        await conn.query("DELETE FROM cart WHERE cart_id = ?", [cartId]);
+      }
+      if (addressBook) {
+  const addressPayload = {
+    fullname: billing.fullName.trim(),
+    phone: billing.phone.trim(),
+    detail_address: billing.address.trim(),
+    ward: billing.wardName?.trim() || '',
+    district: billing.districtName?.trim() || '',
+    city: billing.provinceName?.trim() || '',
+    is_default: 0,
+  };
 
-    const orderItemsValues = items.map((item) => [
-      orderId,
-      item.menu_id,
-      item.size,
-      item.quantity,
-      item.price,
-    ]);
+  const [existing] = await conn.query<RowDataPacket[]>(
+    `SELECT 1 FROM addresses WHERE id = ? AND fullname = ? AND phone = ? AND detail_address = ? AND ward = ? AND district = ? AND city = ?`,
+    [userId, addressPayload.fullname, addressPayload.phone, addressPayload.detail_address, addressPayload.ward, addressPayload.district, addressPayload.city]
+  );
 
+  if (existing.length === 0) {
     await conn.query(
-      "INSERT INTO order_items (order_id, menu_id, size, quantity, price) VALUES ?",
-      [orderItemsValues]
+      `INSERT INTO addresses (id, fullname, phone, detail_address, ward, district, city, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, addressPayload.fullname, addressPayload.phone, addressPayload.detail_address, addressPayload.ward, addressPayload.district, addressPayload.city, 0]
+    );
+  }
+}
+      await conn.commit();
+      return res.json({ message: "Đặt hàng thành công", order_id: orderId });
+    }
+
+    const orderId = await createOrderFromCart(
+      conn,
+      userId,
+      payload,
+      voucherId,
+      discountAmount,
+      deliveryFee,
+      "bank_transfer"
     );
 
-    await conn.query(
-      `INSERT INTO billing_details
-        (order_id, fullname, address, ward, district, city, phone)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        orderId,
-        billing.fullName.trim(),
-        billing.address.trim(),
-        billing.wardName ?? null,
-        billing.districtName ?? null,
-        billing.provinceName ?? null,
-        billing.phone.trim(),
-      ]
-    );
-
-    await conn.query("DELETE FROM cart_items WHERE cart_id = ?", [cartId]);
+    await conn.query("UPDATE orders SET status = 'pending' WHERE order_id = ?", [orderId]);
 
     await conn.commit();
 
-    res.json({
-      message: "Đặt hàng thành công!",
-      order_id: orderId,
-    });
-  } catch (error) {
+    const now = new Date();
+    const vnTime = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const createDate = vnTime.toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+
+    const ipAddr =
+      (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
+      req.socket.remoteAddress ||
+      "127.0.0.1";
+
+    const txnRef = `UID${userId}_${Date.now()}`;
+
+    const vnp_Params: Record<string, string> = {
+      vnp_Version: "2.1.0",
+      vnp_Command: "pay",
+      vnp_TmnCode: vnpayConfig.vnp_TmnCode,
+      vnp_Amount: Math.round(total * 100000).toString(),
+      vnp_CreateDate: createDate,
+      vnp_CurrCode: "VND",
+      vnp_IpAddr: ipAddr,
+      vnp_Locale: "vn",
+      vnp_OrderInfo: `Thanh toan don hang ${orderId}`,
+      vnp_OrderType: "other",
+      vnp_ReturnUrl: "http://localhost:5173/api/vnpay/return",
+      vnp_TxnRef: txnRef,
+    };
+
+    const sortedParams = sortVnpParams(vnp_Params);
+    const signData = qs.stringify(sortedParams, { encode: false });
+    const secureHash = crypto
+      .createHmac("sha512", vnpayConfig.vnp_HashSecret)
+      .update(signData)
+      .digest("hex");
+
+    const paymentUrl =
+      vnpayConfig.vnp_Url +
+      "?" +
+      qs.stringify({ ...sortedParams, vnp_SecureHash: secureHash }, { encode: false });
+
+    return res.json({ payment_url: paymentUrl });
+  } catch (err) {
     await conn.rollback();
-    console.error("Lỗi khi tạo đơn hàng:", error);
-    res.status(500).json({ message: "Không thể tạo đơn hàng" });
+    console.error("Checkout error:", err);
+    return res.status(500).json({ message: "Checkout thất bại" });
   } finally {
     conn.release();
+  }
+});
+
+app.get("/api/vnpay/ipn", async (req: Request, res: Response) => {
+  const vnp_Params = req.query as Record<string, string>;
+  const secureHash = vnp_Params.vnp_SecureHash;
+
+  if (!secureHash) {
+    return res.json({ RspCode: "97", Message: "Missing secure hash" });
+  }
+
+  delete vnp_Params.vnp_SecureHash;
+  delete vnp_Params.vnp_SecureHashType;
+
+  const sortedParams = sortVnpParams(vnp_Params);
+  const signData = qs.stringify(sortedParams, { encode: false });
+  const signed = crypto
+    .createHmac("sha512", vnpayConfig.vnp_HashSecret)
+    .update(signData)
+    .digest("hex");
+
+  if (secureHash !== signed) {
+    return res.json({ RspCode: "97", Message: "Invalid signature" });
+  }
+
+  if (vnp_Params.vnp_ResponseCode !== "00") {
+    return res.json({ RspCode: "00", Message: "Payment failed" });
+  }
+
+  const txnRef = vnp_Params.vnp_TxnRef;
+  const userIdMatch = txnRef?.match(/^UID(\d+)_/);
+  if (!userIdMatch) {
+    return res.json({ RspCode: "01", Message: "Invalid txnRef" });
+  }
+  const userId = Number(userIdMatch[1]);
+
+  const orderInfo = vnp_Params.vnp_OrderInfo;
+  const orderIdMatch = orderInfo.match(/Thanh toan don hang (\d+)/);
+  if (!orderIdMatch) {
+    return res.json({ RspCode: "02", Message: "Invalid order info" });
+  }
+  const orderId = parseInt(orderIdMatch[1]);
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [orderRows] = await conn.query<RowDataPacket[]>(
+      "SELECT voucher_id FROM orders WHERE order_id = ?",
+      [orderId]
+    );
+    const voucherId = orderRows[0]?.voucher_id;
+
+    if (voucherId) {
+      const [result] = await conn.query<ResultSetHeader>(
+        "UPDATE voucher SET quantity = quantity - 1 WHERE voucher_id = ? AND quantity > 0",
+        [voucherId]
+      );
+      if (result.affectedRows === 0) {
+        await conn.rollback();
+        return res.json({ RspCode: "05", Message: "Voucher expired or out of stock" });
+      }
+    }
+
+    await conn.query("UPDATE orders SET status = 'completed' WHERE order_id = ?", [orderId]);
+
+    const { cartId } = await fetchCartDetails(conn, userId);
+    if (cartId) {
+      await conn.query("DELETE FROM cart_items WHERE cart_id = ?", [cartId]);
+      await conn.query("DELETE FROM cart WHERE cart_id = ?", [cartId]);
+    }
+
+    await conn.commit();
+    return res.json({ RspCode: "00", Message: "Success" });
+  } catch (error) {
+    await conn.rollback();
+    console.error("VNPay IPN Error:", error);
+    return res.json({ RspCode: "99", Message: "Internal error" });
+  } finally {
+    conn.release();
+  }
+});
+
+app.get("/api/vnpay/return", async (req: Request, res: Response) => {
+  const vnp_Params = req.query as Record<string, string>;
+  const secureHash = vnp_Params.vnp_SecureHash;
+
+  if (!secureHash) {
+    return res.redirect(`http://localhost:5173/cart?error=no_hash`);
+  }
+
+  delete vnp_Params.vnp_SecureHash;
+  delete vnp_Params.vnp_SecureHashType;
+
+  const sortedParams = sortVnpParams(vnp_Params);
+  const signData = qs.stringify(sortedParams, { encode: false });
+
+  const hmac = crypto.createHmac("sha512", vnpayConfig.vnp_HashSecret);
+  const signed = hmac.update(signData).digest("hex");
+
+  const orderInfo = vnp_Params.vnp_OrderInfo;
+  const orderIdMatch = orderInfo.match(/Thanh toan don hang (\d+)/);
+  if (!orderIdMatch) {
+    return res.redirect(`http://localhost:5173/cart?error=invalid_order_info`);
+  }
+  const orderId = parseInt(orderIdMatch[1]);
+
+  const txnRef = vnp_Params.vnp_TxnRef;
+  const userIdMatch = txnRef?.match(/^UID(\d+)_/);
+  if (!userIdMatch) {
+    return res.redirect(`http://localhost:5173/cart?error=invalid_txn_ref`);
+  }
+  const userId = Number(userIdMatch[1]);
+
+  if (secureHash === signed) {
+    if (vnp_Params.vnp_ResponseCode === "00") {
+      const conn = await db.getConnection();
+      try {
+        const { cartId } = await fetchCartDetails(conn, userId);
+        if (cartId) {
+          await conn.query("DELETE FROM cart_items WHERE cart_id = ?", [cartId]);
+          await conn.query("DELETE FROM cart WHERE cart_id = ?", [cartId]);
+        }
+      } catch (error) {
+        console.error("Error clearing cart on return:", error);
+      } finally {
+        conn.release();
+      }
+      res.redirect(`http://localhost:5173/orderdetail/${orderId}`);
+    } else {
+      const conn = await db.getConnection();
+      try {
+        await conn.query("DELETE FROM orders WHERE order_id = ?", [orderId]);
+        await conn.query("DELETE FROM order_items WHERE order_id = ?", [orderId]);
+        await conn.query("DELETE FROM billingdetails WHERE order_id = ?", [orderId]);
+      } catch (error) {
+        console.error("Error deleting pending order:", error);
+      } finally {
+        conn.release();
+      }
+      res.redirect(`http://localhost:5173/cart`);
+    }
+  } else {
+    res.redirect(`http://localhost:5174/cart?error=invalid_signature`);
   }
 });
 
@@ -1478,6 +1753,7 @@ app.post("/api/voucher/apply", authenticateToken, async (req: AuthRequest, res: 
       message: "Áp dụng voucher thành công",
       voucher_id: voucher.voucher_id,
       discount: Number(discountAmount.toFixed(2)),
+      discount_type: voucher.discount_type,
       subtotal: Number(subtotal.toFixed(2)),
       delivery_fee: deliveryFee,
       total: Number(total.toFixed(2)),
@@ -1810,7 +2086,6 @@ app.post("/api/admin/orders/add", async (req: Request, res: Response) => {
       }
 
       const price = Number((priceRows[0] as { price: number }).price);
-
       subtotal += price * quantity;
       normalizedItems.push({ menu_id: menuId, size, quantity, price });
     }
@@ -1820,18 +2095,12 @@ app.post("/api/admin/orders/add", async (req: Request, res: Response) => {
 
     if (voucherCode && voucherCode.trim() !== "") {
       const voucher = await fetchVoucher(conn, voucherCode, true);
-
       if (!voucher || !validateVoucherActive(voucher)) {
         await conn.rollback();
         return res.status(400).json({ message: "Voucher không hợp lệ hoặc đã hết hạn" });
       }
-
-      discountAmount = Math.min(
-        calculateDiscountAmount(voucher, subtotal),
-        subtotal
-      );
+      discountAmount = Math.min(calculateDiscountAmount(voucher, subtotal), subtotal);
       voucherId = voucher.voucher_id;
-
       await conn.query(
         "UPDATE voucher SET quantity = quantity - 1 WHERE voucher_id = ?",
         [voucherId]
@@ -1839,7 +2108,14 @@ app.post("/api/admin/orders/add", async (req: Request, res: Response) => {
     }
 
     const deliveryFee = 0;
-    const total = subtotal + deliveryFee - discountAmount;
+    const rawTotal = subtotal + deliveryFee - discountAmount;
+    const total = Number(rawTotal.toFixed(3));
+    const vnpayAmount = total * 100000;
+
+    if (total <= 0) {
+      await conn.rollback();
+      return res.status(400).json({ message: "Tổng đơn hàng không hợp lệ" });
+    }
 
     const [orderResult] = await conn.query<ResultSetHeader>(
       `INSERT INTO orders
@@ -1851,7 +2127,7 @@ app.post("/api/admin/orders/add", async (req: Request, res: Response) => {
         Number(subtotal.toFixed(2)),
         deliveryFee,
         Number(discountAmount.toFixed(2)),
-        Number(total.toFixed(2)),
+        total,
         paymentMethod,
         "pending",
       ]
@@ -1888,14 +2164,70 @@ app.post("/api/admin/orders/add", async (req: Request, res: Response) => {
     );
 
     await conn.commit();
+    if (paymentMethod === "bank_transfer") {
+      const now = new Date();
+      const vnOffset = 7 * 60 * 60 * 1000;
+      const vnTime = new Date(now.getTime() + vnOffset);
 
-    res.json({
+      const createDate = vnTime.getUTCFullYear().toString().padStart(4, '0') +
+        (vnTime.getUTCMonth() + 1).toString().padStart(2, '0') +
+        vnTime.getUTCDate().toString().padStart(2, '0') +
+        vnTime.getUTCHours().toString().padStart(2, '0') +
+        vnTime.getUTCMinutes().toString().padStart(2, '0') +
+        vnTime.getUTCSeconds().toString().padStart(2, '0');
+
+      const ipAddr =
+        (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+        req.socket.remoteAddress ||
+        "127.0.0.1";
+
+      const {
+        vnp_TmnCode: tmnCode,
+        vnp_HashSecret: secretKey,
+        vnp_Url: vnpUrl,
+      } = vnpayConfig;
+
+      const txnRef = `ORD${orderId}_${Date.now()}`;
+      const rawReturnUrl = `http://localhost:3000/order?order_id=${orderId}`;
+
+      const vnp_Params: Record<string, string> = {
+        vnp_Version: "2.1.0",
+        vnp_Command: "pay",
+        vnp_TmnCode: tmnCode,
+        vnp_Amount: vnpayAmount.toString(),
+        vnp_CreateDate: createDate,
+        vnp_CurrCode: "VND",
+        vnp_IpAddr: ipAddr,
+        vnp_Locale: "vn",
+        vnp_OrderInfo: `Thanh toan don hang #${orderId} (Admin tao)`,
+        vnp_OrderType: "other",
+        vnp_ReturnUrl: rawReturnUrl,
+        vnp_TxnRef: txnRef,
+      };
+
+      const sortedParams = sortVnpParams(vnp_Params);
+      sortedParams.vnp_ReturnUrl = encodeURIComponent(sortedParams.vnp_ReturnUrl);
+
+      const signData = qs.stringify(sortedParams, { encode: false });
+      const hmac = crypto.createHmac("sha512", secretKey);
+      const secureHash = hmac.update(signData).digest("hex");
+
+      const paymentUrl = vnpUrl + "?" + qs.stringify({ ...sortedParams, vnp_SecureHash: secureHash }, { encode: false });
+
+      return res.json({
+        order_id: orderId,
+        payment_url: paymentUrl,
+        payment_method: "bank_transfer",
+      });
+    }
+    return res.json({
       message: "Thêm đơn hàng thành công",
       order_id: orderId,
       subtotal: Number(subtotal.toFixed(2)),
       discount: Number(discountAmount.toFixed(2)),
-      total: Number(total.toFixed(2)),
+      total: total,
     });
+
   } catch (error) {
     await conn.rollback();
     console.error("Lỗi thêm đơn hàng admin:", error);
@@ -2024,6 +2356,16 @@ app.post("/api/addresses/add", authenticateToken, async (req: AuthRequest, res: 
   await conn.beginTransaction();
 
   try {
+const [existing] = await conn.query<RowDataPacket[]>(
+    `SELECT 1 FROM addresses WHERE id = ? AND fullname = ? AND phone = ? AND detail_address = ? AND ward = ? AND district = ? AND city = ?`,
+    [userId, fullname.trim(), phone.trim(), detail_address.trim(), ward.trim(), district.trim(), city.trim()]
+  );
+
+  if (existing.length > 0) {
+    await conn.rollback();
+    return res.status(400).json({ message: "Địa chỉ này đã tồn tại trong sổ địa chỉ" });
+  }
+
     if (is_default === 1 || is_default === true) {
       await conn.query(`UPDATE addresses SET is_default = 0 WHERE id = ?`, [userId]);
     }

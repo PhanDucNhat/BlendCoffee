@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface CoffeeItem {
   menu_id: number;
@@ -13,6 +14,12 @@ interface CoffeeItem {
 const Seller: React.FC = () => {
   const [coffeeItems, setCoffeeItems] = useState<CoffeeItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const navigate = useNavigate();
+
+  const handleSingleProduct = (id: number) => {
+    navigate(`/singleproduct/${id}`);
+  };
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -74,8 +81,11 @@ const Seller: React.FC = () => {
                 <p className="text-white font-semibold mb-3">
                   {item.price ? `${item.price}đ` : "Updating..."}
                 </p>
-                <button className="border border-[#b6894b] text-[#b6894b] px-5 py-2 text-sm hover:bg-[#b6894b] hover:text-white transition">
-                  Thêm vào giỏ hàng
+                <button
+                  onClick={() => handleSingleProduct(item.menu_id)}
+                  className="border border-[#b6894b] text-[#b6894b] px-5 py-2 text-sm hover:bg-[#b6894b] hover:text-white transition"
+                >
+                  Xem chi tiết
                 </button>
               </div>
             </div>

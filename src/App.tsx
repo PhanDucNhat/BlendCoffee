@@ -5,7 +5,6 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
-// import "./App.css";
 import Navbar from "./components/Navbar/Navbar";
 import Banner from "./components/Banner/Banner.tsx";
 import Contact from "./components/Contact/Contact";
@@ -21,6 +20,7 @@ import AboutPage from "./pages/About";
 import ContactPage from "./pages/Contact";
 import CartPage from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import OrderDetail from "./pages/OrderDetail.tsx";
 import Login from "./pages/Login";
 import ShopPage from "./pages/Shop";
 import SingleProduct from "./pages/SingleProduct";
@@ -102,6 +102,7 @@ const AppContent: React.FC = () => {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout" element={<Checkout />} />
+        <Route path="/orderdetail/:id" element={<OrderDetail />} />
         <Route path="/shop" element={<ShopPage />} />
         <Route path="/profile/:id" element={<Profile />} />
         <Route path="/order" element={<Order />} />

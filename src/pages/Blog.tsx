@@ -33,7 +33,7 @@ const Blog = () => {
   return (
     <>
       <section
-        className="relative h-[80vh] bg-cover bg-center flex items-center justify-center"
+        className="relative h-[40vh] bg-cover bg-center flex items-center justify-center"
         style={{
           backgroundImage: "url('/images/bg_3.jpg')",
         }}

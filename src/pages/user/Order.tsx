@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Eye,
   ChevronDown,
@@ -46,13 +47,13 @@ const statusInfo = {
   canceled: { label: "Đã hủy", icon: CircleX, color: "text-red-400" },
 };
 
-const f = (money: number) => money.toLocaleString("vi-VN") + "₫";
-
 export default function OrderPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [openItem, setOpenItem] = useState<number | null>(null);
   const [detailOrder, setDetailOrder] = useState<Order | null>(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -72,6 +73,28 @@ export default function OrderPage() {
 
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    const vnpResponseCode = searchParams.get("vnp_ResponseCode");
+    const success = searchParams.get("success");
+    const orderId = searchParams.get("order_id");
+
+    if (vnpResponseCode === "00" && orderId) {
+      alert(
+        `Thanh toán thành công!\nĐơn hàng #${orderId
+          .toString()
+          .padStart(6, "0")} đã được xác nhận và đang được xử lý.`
+      );
+      navigate(`/order?order_id=${orderId}`, { replace: true });
+    } else if (success === "true" && orderId) {
+      alert(
+        `Thanh toán thành công!\nĐơn hàng DH${orderId} đã được xác nhận và đang được xử lý.`
+      );
+      navigate(`/order?order_id=${orderId}`, { replace: true });
+    } else if (success === "false") {
+      alert("Thanh toán không thành công. Vui lòng kiểm tra lại.");
+    }
+  }, [searchParams, navigate]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -211,7 +234,7 @@ export default function OrderPage() {
                           <div className="text-xs text-gray-400 mt-1">
                             {order.payment_method === "cash"
                               ? "Thanh toán khi nhận hàng (COD)"
-                              : "Chuyển khoản qua VNPay"}
+                              : "Thanh toán qua VNPay"}
                           </div>
                         </div>
 
@@ -403,7 +426,7 @@ export default function OrderPage() {
                         {detailOrder.voucher_code &&
                           `(${detailOrder.voucher_code})`}
                       </span>
-                      <span>-{f(detailOrder.discount)}</span>
+                      <span>-{detailOrder.discount}đ</span>
                     </div>
                   )}
                   <div className="pt-3 border-t border-gray-700 flex justify-between text-lg font-bold text-yellow-400">

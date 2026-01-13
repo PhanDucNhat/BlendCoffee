@@ -123,7 +123,7 @@ const Navbar: React.FC = () => {
                 </Link>
 
                 {hasSub && (
-                  <ul className="absolute left-0 mt-1 w-48 bg-[#1d1f21] rounded-sm shadow-lg hidden group-hover:block border border-[#2a2c2e]">
+                  <ul className="absolute left-0 w-36 bg-[#1d1f21] rounded-sm shadow-lg hidden group-hover:block border border-[#2a2c2e]">
                     {subMenu.map((sub) => (
                       <li key={sub.id}>
                         <Link
@@ -156,7 +156,7 @@ const Navbar: React.FC = () => {
           </li>
 
           <li className="relative group hover:text-[#b6894b] transition duration-200">
-            <button className="flex items-center">
+            <button className="flex items-center py-2">
               <User className="inline-block w-5 h-5" />
             </button>
 

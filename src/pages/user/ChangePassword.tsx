@@ -137,7 +137,6 @@ const ChangePassword: React.FC = () => {
             </div>
 
             <div className="hidden md:block md:col-span-1"></div>
-
             <div className="md:col-span-7">
               <form onSubmit={handleSubmit} className="space-y-6 text-left">
                 <div className="grid grid-cols-1 gap-6">
@@ -229,7 +228,7 @@ const ChangePassword: React.FC = () => {
                     disabled={loading}
                     className="bg-orange-400 text-white rounded p-3 hover:bg-orange-300 font-bold transition disabled:opacity-70"
                   >
-                    {loading ? "Đang xử lý..." : "Đặt lại mật khẩu"}
+                    Đặt lại mật khẩu
                   </button>
                 </div>
               </form>

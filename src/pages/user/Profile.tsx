@@ -125,8 +125,11 @@ const Profile: React.FC = () => {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">
+                    <label className="text-sm text-gray-400 mb-1 flex">
                       Số điện thoại
+                      <p className="pl-2 italic">
+                        (lấy theo đơn hàng đặt gần đây)
+                      </p>
                     </label>
                     <p className="text-xl text-orange-300 border-b border-gray-700 pb-2">
                       {user.phone || "Chưa cập nhật"}
@@ -144,8 +147,11 @@ const Profile: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">
+                  <label className="text-sm text-gray-400 mb-1 flex">
                     Địa chỉ
+                    <p className="pl-2 italic">
+                      (lấy theo đơn hàng đặt gần đây)
+                    </p>
                   </label>
                   <p className="text-xl text-orange-300 border-b border-gray-700 pb-2">
                     {user.address || "Chưa cập nhật địa chỉ"}

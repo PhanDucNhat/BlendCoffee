@@ -59,7 +59,7 @@ const AboutPage: React.FC = () => {
   return (
     <>
       <section
-        className="relative h-[80vh] bg-cover bg-center flex items-center justify-center"
+        className="relative h-[40vh] bg-cover bg-center flex items-center justify-center"
         style={{
           backgroundImage: "url('/images/bg_3.jpg')",
         }}
@@ -86,7 +86,6 @@ const AboutPage: React.FC = () => {
           <span className="text-amber-400 italic text-lg tracking-widest">
             ĐÁNH GIÁ CỦA KHÁCH HÀNG
           </span>
-          <h2 className="text-4xl font-bold uppercase mt-2">Customers Says</h2>
           <p className="text-gray-300 mt-4 max-w-2xl mx-auto leading-relaxed">
             Những lời chứng thực từ khách hàng của chúng tôi nói lên tất cả về
             chất lượng và dịch vụ mà Blend Coffee mang lại. Chúng tôi tự hào vì

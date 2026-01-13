@@ -30,30 +30,40 @@ interface AddressItem {
   is_default: 1 | 0;
 }
 
+interface CheckoutResponse {
+  payment_url?: string;
+  message?: string;
+  order_id?: number;
+}
+
 const Checkout: React.FC = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
+
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [province, setProvince] = useState<Province | null>(null);
   const [district, setDistrict] = useState<District | null>(null);
   const [ward, setWard] = useState<Ward | null>(null);
 
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [note, setNote] = useState("");
-  const [voucherCode, setVoucherCode] = useState("");
+  const [fullName, setFullName] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
+  const [note, setNote] = useState<string>("");
+
+  const [voucherCode, setVoucherCode] = useState<string>("");
   const [appliedVoucher, setAppliedVoucher] = useState<string | null>(null);
   const [voucherMessage, setVoucherMessage] = useState<string | null>(null);
-  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [voucherLoading, setVoucherLoading] = useState<boolean>(false);
+
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank_transfer">(
     "cash"
   );
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [addToAddressBook, setAddToAddressBook] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [discount, setDiscount] = useState(0);
+
+  const [acceptTerms, setAcceptTerms] = useState<boolean>(false);
+  const [addToAddressBook, setAddToAddressBook] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const [discount, setDiscount] = useState<number>(0);
   const [addresses, setAddresses] = useState<AddressItem[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
 
@@ -66,14 +76,13 @@ const Checkout: React.FC = () => {
   const delivery: number = 0;
   const total = subtotal + delivery - discount;
 
-  const fetchCart = async () => {
+  const fetchCart = async (): Promise<void> => {
     const token = localStorage.getItem("token");
+    if (!token) return;
 
     try {
       const response = await fetch("http://localhost:5000/api/cart", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) {
@@ -83,41 +92,58 @@ const Checkout: React.FC = () => {
       const data: CartItem[] = await response.json();
       setCartItems(data);
     } catch (err) {
-      console.error("Lỗi tải giỏ hàng:", err);
-      alert("Không thể tải thông tin giỏ hàng. Vui lòng thử lại!");
+      console.error(err);
+      alert("Không thể tải thông tin giỏ hàng");
       navigate("/cart");
     } finally {
       setLoading(false);
     }
   };
 
-  const validateForm = () => {
-    if (!fullName.trim()) return alert("Vui lòng nhập họ và tên.");
-    if (!phone.trim()) return alert("Vui lòng nhập số điện thoại.");
-    if (!province) return alert("Vui lòng chọn tỉnh/thành phố.");
-    if (!district) return alert("Vui lòng chọn quận/huyện.");
-    if (!ward) return alert("Vui lòng chọn phường/xã.");
-    if (!address.trim()) return alert("Vui lòng nhập địa chỉ chi tiết.");
-    if (!acceptTerms)
-      return alert(
-        "Vui lòng đồng ý với điều khoản và điều kiện trước khi đặt hàng."
-      );
-    if (cartItems.length === 0) return alert("Giỏ hàng của bạn đang trống.");
+  const validateForm = (): string | null => {
+    if (cartItems.length === 0) {
+      return "Giỏ hàng của bạn đang trống.";
+    }
+    if (!fullName.trim()) {
+      return "Vui lòng nhập họ và tên.";
+    }
+    if (!phone.trim()) {
+      return "Vui lòng nhập số điện thoại.";
+    }
+    if (!/^\d+$/.test(phone.trim())) {
+      return "Số điện thoại chưa hợp lệ. Vui lòng kiểm tra lại.";
+    }
+    if (phone.trim().length < 9 || phone.trim().length > 15) {
+      return "Số điện thoại phải từ 9 đến 15 chữ số. Vui lòng kiểm tra lại.";
+    }
+    if (!address.trim()) {
+      return "Vui lòng nhập địa chỉ chi tiết.";
+    }
+    if (!province) {
+      return "Vui lòng chọn tỉnh/thành phố.";
+    }
+    if (!district) {
+      return "Vui lòng chọn quận/huyện.";
+    }
+    if (!ward) {
+      return "Vui lòng chọn phường/xã.";
+    }
+    if (!acceptTerms) {
+      return "Vui lòng đồng ý với điều khoản và điều kiện trước khi đặt hàng.";
+    }
     return null;
   };
 
-  const handlePlaceOrder = async () => {
-    setFormError(null);
+  const handlePlaceOrder = async (): Promise<void> => {
     const token = localStorage.getItem("token");
-
     if (!token) {
       navigate("/login");
       return;
     }
 
-    const errorMessage = validateForm();
-    if (errorMessage) {
-      setFormError(errorMessage);
+    const error = validateForm();
+    if (error) {
+      alert(error);
       return;
     }
 
@@ -144,30 +170,29 @@ const Checkout: React.FC = () => {
               wardName: ward?.Name ?? null,
             },
             note,
-            voucherCode: appliedVoucher ?? null,
+            voucherCode: appliedVoucher,
             paymentMethod,
             addressBook: addToAddressBook,
           }),
         }
       );
 
-      const data = await response.json();
+      const data: CheckoutResponse = await response.json();
+
       if (!response.ok) {
         throw new Error(data.message || "Không thể đặt hàng");
       }
 
-      setCartItems([]);
-      setDiscount(0);
-      setVoucherCode("");
-      setAppliedVoucher(null);
-      setVoucherMessage(null);
-      alert("Đặt hàng thành công! Bạn có thể theo dõi trong lịch sử đơn.");
-      navigate("/order");
-    } catch (error) {
-      console.error("Lỗi đặt hàng:", error);
-      setFormError(
-        error instanceof Error ? error.message : "Không thể đặt hàng"
-      );
+      if (data.payment_url) {
+        window.location.href = data.payment_url;
+        return;
+      }
+
+      alert("Đặt hàng thành công!");
+      navigate(`/orderdetail/${data.order_id}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Không thể đặt hàng";
+      alert(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -201,6 +226,19 @@ const Checkout: React.FC = () => {
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.message || "Không thể áp dụng voucher");
+      }
+
+      if (
+        (data.discount_type === "percent" &&
+          paymentMethod !== "bank_transfer") ||
+        (data.discount_type === "fixed" && paymentMethod !== "cash")
+      ) {
+        setVoucherMessage(
+          "Voucher này chỉ áp dụng cho phương thức thanh toán phù hợp."
+        );
+        setDiscount(0);
+        setAppliedVoucher(null);
+        return;
       }
 
       setDiscount(data.discount || 0);
@@ -636,17 +674,12 @@ const Checkout: React.FC = () => {
                     Tôi đã đọc và đồng ý với các điều khoản và điều kiện
                   </span>
                 </label>
-
-                {formError && (
-                  <p className="text-red-500 text-sm mt-4">{formError}</p>
-                )}
-
                 <button
                   className="w-full bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 text-black font-bold py-3 rounded mt-6 uppercase"
                   onClick={handlePlaceOrder}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Đang xử lý..." : "Đặt hàng"}
+                  Đặt hàng
                 </button>
               </div>
             </div>

@@ -44,7 +44,7 @@ const MenuHeader: React.FC = () => {
   return (
     <>
       <section
-        className="relative h-[80vh] bg-cover bg-center flex items-center justify-center"
+        className="relative h-[60vh] bg-cover bg-center flex items-center justify-center"
         style={{ backgroundImage: "url('/images/bg_3.jpg')" }}
       >
         <div className="absolute inset-0 bg-opacity-60"></div>
@@ -99,10 +99,10 @@ const MenuHeader: React.FC = () => {
 
                           {item.price !== undefined && (
                             <span className="text-amber-400 font-semibold">
-                              $
                               {item.price
                                 ? parseFloat(String(item.price)).toFixed(3)
-                                : "0.00"}
+                                : "0.000"}
+                              đ
                             </span>
                           )}
                         </div>

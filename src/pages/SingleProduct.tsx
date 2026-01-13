@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { CircleCheck } from "lucide-react";
 
 interface MenuDetail {
   menu_id: number;
@@ -22,11 +23,22 @@ const SingleProduct: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [shopData, setShopData] = useState<Record<string, MenuDetail[]>>({});
   const [activeCategory, setActiveCategory] = useState<string>("");
-
   const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<"login" | "success" | null>(null);
 
   const handleSingleProduct = (id: number) => {
     navigate(`/singleproduct/${id}`);
+  };
+
+  const openModal = (type: "login" | "success") => {
+    setModalType(type);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setModalType(null);
   };
 
   useEffect(() => {
@@ -36,7 +48,6 @@ const SingleProduct: React.FC = () => {
         setLoading(false);
         return;
       }
-
       try {
         setLoading(true);
         const response = await fetch(`http://localhost:5000/api/menu/${id}`);
@@ -49,24 +60,19 @@ const SingleProduct: React.FC = () => {
           setLoading(false);
           return;
         }
-
         const data: MenuDetail[] = await response.json();
-
         if (data.length === 0) {
           setError("Không tìm thấy sản phẩm");
           setLoading(false);
           return;
         }
-
         const normalizedData = data.map((item) => ({
           ...item,
           price: Number(item.price),
         }));
-
         const baseProduct = normalizedData[0];
         setProduct(baseProduct);
         setSizes(normalizedData);
-
         const mediumSize = normalizedData.find(
           (item) => item.size === "Medium"
         );
@@ -78,7 +84,6 @@ const SingleProduct: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchProduct();
   }, [id]);
 
@@ -87,18 +92,14 @@ const SingleProduct: React.FC = () => {
       try {
         const response = await fetch("http://localhost:5000/api/menu");
         if (!response.ok) throw new Error("Lỗi khi lấy dữ liệu menu");
-
         const data: MenuDetail[] = await response.json();
-
         const grouped: Record<string, MenuDetail[]> = {};
         data.forEach((item) => {
           const catName = item.category_name || `Category ${item.category_id}`;
           if (!grouped[catName]) grouped[catName] = [];
           grouped[catName].push(item);
         });
-
         setShopData(grouped);
-
         const firstCategory = Object.keys(grouped)[0];
         if (firstCategory) setActiveCategory(firstCategory);
       } catch (err: unknown) {
@@ -107,7 +108,6 @@ const SingleProduct: React.FC = () => {
         else setError("Đã xảy ra lỗi không xác định");
       }
     };
-
     fetchMenu();
   }, []);
 
@@ -132,6 +132,38 @@ const SingleProduct: React.FC = () => {
   const currentPrice =
     Number(sizes.find((s) => s.size === selectedSize)?.price) || 0;
 
+  const handleAddToCart = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      openModal("login");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:5000/api/cart/add", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          menu_id: product.menu_id,
+          size: selectedSize,
+          quantity: quantity,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        openModal("success");
+      } else {
+        alert(data.message || "Lỗi khi thêm vào giỏ hàng");
+      }
+    } catch {
+      alert("Lỗi kết nối server");
+    }
+  };
+
   return (
     <>
       <section
@@ -152,7 +184,6 @@ const SingleProduct: React.FC = () => {
           </p>
         </div>
       </section>
-
       <section className="bg-black text-white py-12 px-6 text-left">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -167,14 +198,11 @@ const SingleProduct: React.FC = () => {
                 className="w-full rounded-lg object-cover h-96"
               />
             </div>
-
             <div className="space-y-6">
               <h1 className="text-3xl font-bold uppercase">{product.name}</h1>
-
               <p className="text-3xl font-bold text-yellow-500">
                 {currentPrice.toFixed(3)}đ
               </p>
-
               <div className="text-gray-400 text-sm space-y-4">
                 <p>
                   {product.description || "Không có mô tả cho sản phẩm này."}
@@ -204,14 +232,12 @@ const SingleProduct: React.FC = () => {
                 >
                   −
                 </button>
-
                 <input
                   type="text"
                   value={quantity}
                   readOnly
                   className="w-16 text-center bg-gray-800 border border-gray-700 rounded-md py-2"
                 />
-
                 <button
                   onClick={() => setQuantity(quantity + 1)}
                   className="w-10 h-10 bg-gray-800 border border-gray-700 rounded-md hover:bg-gray-700 transition"
@@ -221,41 +247,7 @@ const SingleProduct: React.FC = () => {
               </div>
 
               <button
-                onClick={async () => {
-                  const token = localStorage.getItem("token");
-                  if (!token) {
-                    alert("Vui lòng đăng nhập để thêm vào giỏ hàng!");
-                    navigate("/login");
-                    return;
-                  }
-
-                  try {
-                    const response = await fetch(
-                      "http://localhost:5000/api/cart/add",
-                      {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          Authorization: `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({
-                          menu_id: product.menu_id,
-                          size: selectedSize,
-                          quantity: quantity,
-                        }),
-                      }
-                    );
-
-                    const data = await response.json();
-                    if (response.ok) {
-                      alert("Đã thêm vào giỏ hàng!");
-                    } else {
-                      alert(data.message || "Lỗi khi thêm vào giỏ");
-                    }
-                  } catch {
-                    alert("Lỗi kết nối server");
-                  }
-                }}
+                onClick={handleAddToCart}
                 className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-3 px-8 rounded-md uppercase transition"
               >
                 Thêm vào giỏ hàng
@@ -305,7 +297,6 @@ const SingleProduct: React.FC = () => {
                       className="w-full h-full object-cover"
                     />
                   </div>
-
                   <div className="p-6 flex flex-col flex-grow text-center">
                     <h3 className="text-lg font-bold uppercase text-white mb-2">
                       {item.name}
@@ -329,6 +320,70 @@ const SingleProduct: React.FC = () => {
           )}
         </div>
       </section>
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg max-w-md w-full p-8 text-center border border-gray-700">
+            {modalType === "login" ? (
+              <>
+                <h3 className="text-2xl font-bold text-white mb-4">
+                  Yêu cầu đăng nhập
+                </h3>
+                <p className="text-gray-300 mb-8">
+                  Bạn cần đăng nhập để có thể thêm sản phẩm vào giỏ hàng.
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={() => {
+                      closeModal();
+                      navigate("/login");
+                    }}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-3 px-8 rounded-md uppercase"
+                  >
+                    Đăng nhập
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    className="border border-gray-600 text-gray-300 hover:bg-gray-800 py-3 px-8 rounded-md uppercase"
+                  >
+                    Hủy
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-6">
+                  <div className="w-16 h-16 mx-auto bg-green-600 rounded-full flex items-center justify-center">
+                    <CircleCheck className="text-white w-12 h-12" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-4">
+                  Thêm vào giỏ hàng thành công!
+                </h3>
+                <p className="text-gray-300 mb-8">
+                  {product.name} ({selectedSize}) x {quantity}
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={() => {
+                      closeModal();
+                      navigate("/cart");
+                    }}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-3 px-3 rounded-md uppercase"
+                  >
+                    Xem giỏ hàng
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    className="border border-gray-600 text-gray-300 bg-gray-500 hover:bg-gray-800 py-3 px-3 rounded-md uppercase"
+                  >
+                    Tiếp tục mua hàng
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 };

@@ -104,7 +104,7 @@ const Cart: React.FC = () => {
             onClick={() => navigate("/shop")}
             className="mt-6 bg-yellow-600 hover:bg-yellow-700 text-black font-bold py-3 px-8 rounded uppercase"
           >
-            Tiếp tục mua sắm
+            Tiếp tục xem sản phẩm
           </button>
         </div>
       </>
@@ -118,14 +118,14 @@ const Cart: React.FC = () => {
         style={{ backgroundImage: "url('/images/bg_2.jpg')" }}
       ></div>
 
-      <div className="bg-black text-white min-h-screen p-6 px-[300px]">
-        <div className="bg-yellow-600 bg-opacity-20 rounded-t-lg p-4 mb-4 hidden md:flex text-sm font-bold">
-          <div className="w-12"></div>
+      <div className="bg-black text-white min-h-screen p-6 px-64">
+        <div className="bg-yellow-600 bg-opacity-20 rounded-t-lg p-4 mb-4 hidden md:flex text-sm font-bold gap-4">
+          <div className="w-8"></div>
           <div className="w-20"></div>
-          <div className="flex-1 pr-10 text-center">Sản phẩm</div>
-          <div className="pr-[72px]">Size</div>
-          <div className="w-20 text-center pr-[105px]">Đơn giá</div>
-          <div className="w-24 text-center pr-24">Số lượng</div>
+          <div className="flex-1 text-center">Sản phẩm</div>
+          <div className="w-20 text-center">Size</div>
+          <div className="w-20 text-center">Đơn giá</div>
+          <div className="w-24 text-center">Số lượng</div>
           <div className="w-20 text-center">Thành tiền</div>
         </div>
 
@@ -147,8 +147,8 @@ const Cart: React.FC = () => {
               className="w-20 h-20 rounded-lg object-cover"
             />
 
-            <div className="flex-1 text-center md:text-left">
-              <h3 className="font-bold uppercase text-sm">{item.name}</h3>
+            <div className="flex-1 md:text-left">
+              <h3 className="font-bold uppercase text-sm pb-2">{item.name}</h3>
               <p className="text-xs text-gray-400">
                 {item.description || "Không có mô tả"}
               </p>

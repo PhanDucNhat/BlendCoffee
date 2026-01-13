@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Product {
   menu_id: number;
@@ -14,7 +15,10 @@ const Product: React.FC = () => {
   const [shopData, setShopData] = useState<Record<string, Product[]>>({});
   const [, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("");
-  // const [activeTab, setActiveTab] = useState<string>("Main Dish");
+  const navigate = useNavigate();
+  const handleSingleProduct = (id: number) => {
+    navigate(`/singleproduct/${id}`);
+  };
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -102,8 +106,11 @@ const Product: React.FC = () => {
                   : "0.000"}
                 đ
               </p>
-              <button className="border border-[#b6894b] text-[#b6894b] px-5 py-2 text-sm hover:bg-[#b6894b] hover:text-white transition">
-                Thêm vào giỏ hàng
+              <button
+                onClick={() => handleSingleProduct(item.menu_id)}
+                className="border border-[#b6894b] text-[#b6894b] px-5 py-2 text-sm hover:bg-[#b6894b] hover:text-white transition"
+              >
+                Xem chi tiết
               </button>
             </div>
           ))}
