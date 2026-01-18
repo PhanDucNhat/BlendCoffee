@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { apiRequest, API_ENDPOINTS } from "../../config/api";
 
 interface BlogPost {
   blog_id: number;
@@ -17,7 +19,7 @@ const Blog: React.FC = () => {
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const response = await fetch("http://localhost:5173/api/blog");
+        const response = await apiRequest(API_ENDPOINTS.BLOG_LIST);
         if (!response.ok) {
           throw new Error("Lỗi khi tải dữ liệu blog");
         }
@@ -57,11 +59,11 @@ const Blog: React.FC = () => {
               key={index}
               className="bg-[#141414] hover:scale-105 transition-transform duration-500"
             >
-              <a
-                href="#"
+              <Link
+                to={`/blog/${blog.blog_id}`}
                 className="block h-64 bg-cover bg-center"
                 style={{ backgroundImage: `url(${blog.image_url})` }}
-              ></a>
+              ></Link>
 
               <div className="p-6">
                 <div className="flex items-center gap-3 text-gray-400 text-sm mb-3">
@@ -73,7 +75,7 @@ const Blog: React.FC = () => {
                 </div>
 
                 <h3 className="font-semibold text-lg mb-2 hover:text-[#b6894b] transition-colors">
-                  <a href="#">{blog.title}</a>
+                  <Link to={`/blog/${blog.blog_id}`}>{blog.title}</Link>
                 </h3>
 
                 <p className="text-gray-400 text-sm leading-relaxed text-left">
