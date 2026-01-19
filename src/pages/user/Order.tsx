@@ -109,6 +109,49 @@ export default function OrderPage() {
     });
   };
 
+  const handleCompleteOrder = async (orderId: number) => {
+    if (!window.confirm("Bạn có chắc chắn đã nhận được đơn hàng này?")) {
+      return false;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      return false;
+    }
+
+    try {
+      await axios.post(
+        `http://localhost:5000/api/orders/${orderId}/complete`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.order_id === orderId ? { ...o, status: "completed" as const } : o
+        )
+      );
+
+      if (detailOrder?.order_id === orderId) {
+        setDetailOrder((prev) =>
+          prev ? { ...prev, status: "completed" as const } : null
+        );
+      }
+
+      alert("Đã xác nhận nhận hàng thành công!");
+      return true;
+    } catch (err) {
+      console.error("Lỗi xác nhận nhận hàng:", err);
+      alert("Không thể xác nhận nhận hàng. Vui lòng thử lại!");
+      return false;
+    }
+  };
+
   const handleCancelOrder = async (orderId: number) => {
     if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) {
       return false;
@@ -311,9 +354,18 @@ export default function OrderPage() {
                               >
                                 Hủy đơn
                               </button>
+                            ) : order.status === "processing" ? (
+                              <button
+                                onClick={() =>
+                                  handleCompleteOrder(order.order_id)
+                                }
+                                className="text-green-500 pr-4 underline hover:text-green-400 transition"
+                              >
+                                Đã nhận
+                              </button>
                             ) : (
                               <span className="text-gray-500 pr-4">
-                                Hủy đơn
+                                {order.status === "completed" ? "Đã hoàn thành" : "Đã hủy"}
                               </span>
                             )}
 
