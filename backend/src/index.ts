@@ -1257,17 +1257,6 @@ app.get("/api/blog/:id/comments", async (req: Request, res: Response) => {
   }
 
   try {
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS blog_comments (
-        comment_id INT AUTO_INCREMENT PRIMARY KEY,
-        blog_id INT NOT NULL,
-        user_name VARCHAR(255) NOT NULL,
-        content TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (blog_id) REFERENCES blog(blog_id) ON DELETE CASCADE
-      )
-    `);
-
     const [rows] = await db.query<RowDataPacket[]>(
       `SELECT comment_id, user_name, content, created_at 
        FROM blog_comments 
@@ -1312,17 +1301,6 @@ app.post("/api/blog/:id/comments", async (req: Request, res: Response) => {
       await conn.rollback();
       return res.status(404).json({ error: "Bài viết không tồn tại" });
     }
-
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS blog_comments (
-        comment_id INT AUTO_INCREMENT PRIMARY KEY,
-        blog_id INT NOT NULL,
-        user_name VARCHAR(255) NOT NULL,
-        content TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (blog_id) REFERENCES blog(blog_id) ON DELETE CASCADE
-      )
-    `);
 
     const [result] = await conn.query<ResultSetHeader>(
       `INSERT INTO blog_comments (blog_id, user_name, content) VALUES (?, ?, ?)`,
@@ -2425,6 +2403,53 @@ app.post("/api/orders/:id/cancel", authenticateToken, async (req: AuthRequest, r
     await conn.rollback();
     console.error("Lỗi hủy đơn hàng:", error);
     res.status(500).json({ message: "Lỗi server khi hủy đơn hàng" });
+  } finally {
+    conn.release();
+  }
+});
+
+app.post("/api/orders/:id/complete", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const orderId = Number(req.params.id);
+
+  if (isNaN(orderId) || orderId <= 0) {
+    return res.status(400).json({ message: "ID đơn hàng không hợp lệ" });
+  }
+
+  const conn = await db.getConnection();
+  await conn.beginTransaction();
+
+  try {
+    const [orders] = await conn.query<RowDataPacket[]>(
+      `SELECT status FROM orders WHERE order_id = ? AND id = ?`,
+      [orderId, userId]
+    );
+
+    if (orders.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    const currentStatus = orders[0].status;
+
+    if (currentStatus !== "processing") {
+      await conn.rollback();
+      return res.status(400).json({
+        message: "Chỉ có thể xác nhận nhận hàng khi đơn hàng đang ở trạng thái Đang giao"
+      });
+    }
+
+    await conn.query(
+      `UPDATE orders SET status = 'completed' WHERE order_id = ?`,
+      [orderId]
+    );
+
+    await conn.commit();
+    res.json({ message: "Đã xác nhận nhận hàng thành công!" });
+  } catch (error) {
+    await conn.rollback();
+    console.error("Lỗi xác nhận nhận hàng:", error);
+    res.status(500).json({ message: "Lỗi server khi xác nhận nhận hàng" });
   } finally {
     conn.release();
   }
