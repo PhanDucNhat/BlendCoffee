@@ -5,7 +5,6 @@ import bcrypt from "bcrypt"; //mã hóa mk
 import jwt from "jsonwebtoken"; //xác thực users
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { PoolConnection } from "mysql2/promise";
-import { startOfDay, endOfDay } from "date-fns";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -26,6 +25,9 @@ interface User extends RowDataPacket {
   role: string;
   phone: string;
   address: string;
+  is_banned: number;
+  banned_until: Date | null;
+  ban_reason: string | null;
 }
 
 interface MenuDetail extends RowDataPacket {
@@ -78,6 +80,17 @@ interface VoucherRow extends RowDataPacket {
   discount_value: number;
 }
 
+interface Blog extends RowDataPacket {
+  blog_id: number;
+  title: string;
+  description: string;
+  image_url: string;
+  post_date: Date;
+  comments_count: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
 interface OrderDetailRow extends RowDataPacket {
   order_id: number;
   total: number;
@@ -108,7 +121,7 @@ interface AdminOrderRow extends RowDataPacket {
   discount: number | null;
   total: number;
   payment_method: "cash" | "bank_transfer";
-  status: "pending" | "processing" | "completed" | "canceled" | "cancel";
+  status: "pending" | "processing" | "completed" | "canceled";
   created_at: Date;
   voucher_code: string | null;
   fullname: string | null;
@@ -276,12 +289,57 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
     return res.status(401).json({ message: "Không có token" });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {
       return res.status(403).json({ message: "Token không hợp lệ hoặc đã hết hạn" });
     }
 
-    req.user = decoded as { id: number; role: string };
+    const user = decoded as { id: number; role: string };
+    
+    if (user.role === 'user') {
+      try {
+        const [userRows] = await db.query<RowDataPacket[]>(
+          "SELECT is_banned, banned_until, ban_reason FROM users WHERE id = ?",
+          [user.id]
+        );
+
+        if (userRows.length > 0) {
+          const userData = userRows[0] as { is_banned: number; banned_until: Date | null; ban_reason: string | null };
+          
+          if (userData.is_banned === 1) {
+            if (!userData.banned_until) {
+              return res.status(403).json({ 
+                message: "Tài khoản của bạn đã bị chặn vĩnh viễn",
+                reason: userData.ban_reason,
+                banned: true
+              });
+            }
+
+            const now = new Date();
+            const bannedUntil = new Date(userData.banned_until);
+
+            if (now < bannedUntil) {
+              return res.status(403).json({ 
+                message: "Tài khoản của bạn đã bị chặn",
+                reason: userData.ban_reason,
+                bannedUntil: bannedUntil.toISOString(),
+                banned: true
+              });
+            } else {
+              await db.query(
+                "UPDATE users SET is_banned = 0, banned_until = NULL, ban_reason = NULL WHERE id = ?",
+                [user.id]
+              );
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi kiểm tra ban status:", error);
+        return res.status(500).json({ message: "Lỗi server" });
+      }
+    }
+
+    req.user = user;
     next();
   });
 };
@@ -1031,10 +1089,34 @@ app.get("/api/admin/menu-sizes", async (req: Request, res: Response) => {
 
 app.get("/api/blog", async (req: Request, res: Response) => {
   try {
-    const [rows] = await db.query("SELECT * FROM blog");
+    const [rows] = await db.query("SELECT * FROM blog ORDER BY post_date DESC");
     res.json(rows);
   } catch (error) {
     console.error("Lỗi khi truy vấn blog:", error);
+    res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
+  }
+});
+
+app.get("/api/blog/:id", async (req: Request, res: Response) => {
+  const blogId = Number(req.params.id);
+  
+  if (isNaN(blogId) || blogId <= 0) {
+    return res.status(400).json({ error: "ID blog không hợp lệ" });
+  }
+
+  try {
+    const [rows] = await db.query<Blog[]>(
+      "SELECT * FROM blog WHERE blog_id = ?",
+      [blogId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Không tìm thấy bài viết" });
+    }
+
+    res.json(rows[0]);
+  } catch (error) {
+    console.error("Lỗi khi lấy chi tiết blog:", error);
     res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
   }
 });
@@ -1122,9 +1204,180 @@ app.delete("/api/admin/blog/bulk-delete", async (req: Request, res: Response) =>
   }
 });
 
+app.get("/api/blog/:id", async (req: Request, res: Response) => {
+  const blogId = Number(req.params.id);
+  if (isNaN(blogId)) {
+    return res.status(400).json({ error: "ID không hợp lệ" });
+  }
+
+  try {
+    const [rows] = await db.query<RowDataPacket[]>(
+      "SELECT * FROM blog WHERE blog_id = ?",
+      [blogId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Không tìm thấy bài viết" });
+    }
+
+    res.json(rows[0]);
+  } catch (error) {
+    console.error("Lỗi khi truy vấn blog chi tiết:", error);
+    res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
+  }
+});
+
+app.get("/api/blog/related/:id", async (req: Request, res: Response) => {
+  const blogId = Number(req.params.id);
+  if (isNaN(blogId)) {
+    return res.status(400).json({ error: "ID không hợp lệ" });
+  }
+
+  try {
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT blog_id, title, image_url, post_date 
+       FROM blog 
+       WHERE blog_id != ? 
+       ORDER BY post_date DESC 
+       LIMIT 5`,
+      [blogId]
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Lỗi khi truy vấn bài viết liên quan:", error);
+    res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
+  }
+});
+
+app.get("/api/blog/:id/comments", async (req: Request, res: Response) => {
+  const blogId = Number(req.params.id);
+  if (isNaN(blogId)) {
+    return res.status(400).json({ error: "ID không hợp lệ" });
+  }
+
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS blog_comments (
+        comment_id INT AUTO_INCREMENT PRIMARY KEY,
+        blog_id INT NOT NULL,
+        user_name VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (blog_id) REFERENCES blog(blog_id) ON DELETE CASCADE
+      )
+    `);
+
+    const [rows] = await db.query<RowDataPacket[]>(
+      `SELECT comment_id, user_name, content, created_at 
+       FROM blog_comments 
+       WHERE blog_id = ? 
+       ORDER BY created_at DESC`,
+      [blogId]
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Lỗi khi truy vấn bình luận:", error);
+    res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
+  }
+});
+
+app.post("/api/blog/:id/comments", async (req: Request, res: Response) => {
+  const blogId = Number(req.params.id);
+  if (isNaN(blogId)) {
+    return res.status(400).json({ error: "ID không hợp lệ" });
+  }
+
+  const { user_name, content } = req.body;
+
+  if (!user_name || !content) {
+    return res.status(400).json({ error: "Thiếu thông tin bắt buộc" });
+  }
+
+  if (user_name.trim().length === 0 || content.trim().length === 0) {
+    return res.status(400).json({ error: "Tên và nội dung không được để trống" });
+  }
+
+  const conn = await db.getConnection();
+  await conn.beginTransaction();
+
+  try {
+    const [blogRows] = await conn.query<RowDataPacket[]>(
+      "SELECT blog_id FROM blog WHERE blog_id = ?",
+      [blogId]
+    );
+
+    if (blogRows.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ error: "Bài viết không tồn tại" });
+    }
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS blog_comments (
+        comment_id INT AUTO_INCREMENT PRIMARY KEY,
+        blog_id INT NOT NULL,
+        user_name VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (blog_id) REFERENCES blog(blog_id) ON DELETE CASCADE
+      )
+    `);
+
+    const [result] = await conn.query<ResultSetHeader>(
+      `INSERT INTO blog_comments (blog_id, user_name, content) VALUES (?, ?, ?)`,
+      [blogId, user_name.trim(), content.trim()]
+    );
+
+    await conn.query(
+      `UPDATE blog SET comments_count = (
+        SELECT COUNT(*) FROM blog_comments WHERE blog_id = ?
+      ) WHERE blog_id = ?`,
+      [blogId, blogId]
+    );
+
+    await conn.commit();
+
+    const [newComment] = await conn.query<RowDataPacket[]>(
+      `SELECT comment_id, user_name, content, created_at 
+       FROM blog_comments 
+       WHERE comment_id = ?`,
+      [result.insertId]
+    );
+
+    res.json({
+      message: "Thêm bình luận thành công!",
+      comment: newComment[0]
+    });
+
+  } catch (error) {
+    await conn.rollback();
+    console.error("Lỗi thêm bình luận:", error);
+    res.status(500).json({ error: "Không thể thêm bình luận" });
+  } finally {
+    conn.release();
+  }
+});
+
 app.get("/api/user", async (req: Request, res: Response) => {
   try {
-    const [rows] = await db.query("SELECT * FROM users");
+    const [rows] = await db.query(`
+      SELECT 
+        u.id,
+        u.username,
+        u.email,
+        u.created_at,
+        u.is_banned,
+        u.banned_until,
+        u.ban_reason,
+        COUNT(CASE WHEN o.status = 'completed' THEN 1 END) as completed_orders,
+        COUNT(CASE WHEN o.status = 'canceled' THEN 1 END) as canceled_orders
+      FROM users u
+      LEFT JOIN orders o ON u.id = o.id
+      WHERE u.role = 'user'
+      GROUP BY u.id, u.username, u.email, u.created_at, u.is_banned, u.banned_until, u.ban_reason
+      ORDER BY u.created_at DESC
+    `);
     res.json(rows);
   } catch (error) {
     console.error("Lỗi khi truy vấn user:", error);
@@ -1155,7 +1408,7 @@ app.get("/api/user/:id", async (req: Request, res: Response) => {
         FROM orders o
         INNER JOIN billing_details bd ON o.order_id = bd.order_id
         WHERE o.id = ?
-        ORDER BY o.created_at DESC   -- Sửa từ order_date → created_at
+        ORDER BY o.created_at DESC
         LIMIT 1`,
       [userId]
     );
@@ -1271,6 +1524,167 @@ app.delete("/api/admin/user/:id", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Lỗi xóa nhân sự: ", error);
     res.status(500).json({ error: "Lỗi server khi xóa" });
+  }
+});
+
+app.delete("/api/admin/user/bulk-delete", async (req: Request, res: Response) => {
+  const { ids } = req.body as { ids: number[] };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: "Danh sách ID không hợp lệ" });
+  }
+
+  const validIds = ids.filter(id => typeof id === "number" && id > 0);
+  if (validIds.length === 0) return res.status(400).json({ error: "Không có ID hợp lệ" });
+
+  try {
+    const [result] = await db.query<ResultSetHeader>(
+      "DELETE FROM users WHERE id IN (?) AND role = 'user'",
+      [validIds]
+    );
+    res.json({ message: `Đã xóa ${result.affectedRows} người dùng!` });
+  } catch (error) {
+    console.error("Lỗi xóa hàng loạt:", error);
+    res.status(500).json({ error: "Lỗi server" });
+  }
+});
+
+app.get("/api/admin/user/:id/orders", async (req: Request, res: Response) => {
+  const userId = Number(req.params.id);
+  if (isNaN(userId) || userId <= 0) {
+    return res.status(400).json({ error: "ID không hợp lệ" });
+  }
+
+  try {
+    const [orders] = await db.query<RowDataPacket[]>(`
+      SELECT 
+        o.order_id,
+        o.total,
+        o.payment_method,
+        o.status,
+        o.created_at,
+        bd.fullname,
+        bd.phone,
+        bd.address,
+        bd.ward,
+        bd.district,
+        bd.city
+      FROM orders o
+      LEFT JOIN billing_details bd ON o.order_id = bd.order_id
+      WHERE o.id = ?
+      ORDER BY o.created_at DESC
+    `, [userId]);
+
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order) => {
+        const [items] = await db.query<RowDataPacket[]>(`
+          SELECT 
+            oi.menu_id,
+            oi.size,
+            oi.quantity,
+            oi.price,
+            m.name,
+            m.image_url
+          FROM order_items oi
+          LEFT JOIN menu m ON oi.menu_id = m.menu_id
+          WHERE oi.order_id = ?
+        `, [order.order_id]);
+
+        return {
+          ...order,
+          items
+        };
+      })
+    );
+
+    res.json(ordersWithItems);
+  } catch (error) {
+    console.error("Lỗi lấy lịch sử đơn hàng:", error);
+    res.status(500).json({ error: "Lỗi server" });
+  }
+});
+
+app.post("/api/admin/user/:id/ban", async (req: Request, res: Response) => {
+  const userId = Number(req.params.id);
+  const { duration, reason, customDuration } = req.body as {
+    duration: string;
+    reason: string;
+    customDuration?: number;
+  };
+
+  if (isNaN(userId) || userId <= 0) {
+    return res.status(400).json({ error: "ID không hợp lệ" });
+  }
+
+  if (!reason || reason.trim() === "") {
+    return res.status(400).json({ error: "Vui lòng nhập lý do chặn" });
+  }
+
+  try {
+    let bannedUntil: Date | null = null;
+
+    if (duration !== "permanent") {
+      const now = new Date();
+      let durationInHours = 0;
+
+      switch (duration) {
+        case "1h":
+          durationInHours = 1;
+          break;
+        case "24h":
+          durationInHours = 24;
+          break;
+        case "7d":
+          durationInHours = 24 * 7;
+          break;
+        case "30d":
+          durationInHours = 24 * 30;
+          break;
+        case "custom":
+          if (!customDuration || customDuration <= 0) {
+            return res.status(400).json({ error: "Thời gian tùy chỉnh không hợp lệ" });
+          }
+          durationInHours = customDuration;
+          break;
+        default:
+          return res.status(400).json({ error: "Thời gian chặn không hợp lệ" });
+      }
+
+      bannedUntil = new Date(now.getTime() + durationInHours * 60 * 60 * 1000);
+    }
+
+    await db.query(
+      `UPDATE users SET is_banned = 1, banned_until = ?, ban_reason = ? WHERE id = ? AND role = 'user'`,
+      [bannedUntil, reason.trim(), userId]
+    );
+
+    res.json({ 
+      message: "Chặn người dùng thành công!",
+      bannedUntil: bannedUntil ? bannedUntil.toISOString() : null
+    });
+  } catch (error) {
+    console.error("Lỗi chặn người dùng:", error);
+    res.status(500).json({ error: "Lỗi server" });
+  }
+});
+
+app.post("/api/admin/user/:id/unban", async (req: Request, res: Response) => {
+  const userId = Number(req.params.id);
+
+  if (isNaN(userId) || userId <= 0) {
+    return res.status(400).json({ error: "ID không hợp lệ" });
+  }
+
+  try {
+    await db.query(
+      `UPDATE users SET is_banned = 0, banned_until = NULL, ban_reason = NULL WHERE id = ? AND role = 'user'`,
+      [userId]
+    );
+
+    res.json({ message: "Bỏ chặn người dùng thành công!" });
+  } catch (error) {
+    console.error("Lỗi bỏ chặn người dùng:", error);
+    res.status(500).json({ error: "Lỗi server" });
   }
 });
 
@@ -2016,6 +2430,59 @@ app.post("/api/orders/:id/cancel", authenticateToken, async (req: AuthRequest, r
   }
 });
 
+app.delete("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id;
+  const orderId = Number(req.params.id);
+
+  if (isNaN(orderId) || orderId <= 0) {
+    return res.status(400).json({ message: "ID đơn hàng không hợp lệ" });
+  }
+
+  const conn = await db.getConnection();
+  await conn.beginTransaction();
+
+  try {
+    const [orders] = await conn.query<RowDataPacket[]>(
+      `SELECT status, voucher_id FROM orders WHERE order_id = ? AND id = ?`,
+      [orderId, userId]
+    );
+
+    if (orders.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    const currentStatus = orders[0].status;
+    const voucherId = orders[0].voucher_id;
+
+    if (currentStatus !== "pending") {
+      await conn.rollback();
+      return res.status(400).json({
+        message: "Chỉ có thể xóa đơn hàng khi đang ở trạng thái Chờ xác nhận"
+      });
+    }
+
+    await conn.query(`DELETE FROM order_items WHERE order_id = ?`, [orderId]);
+    await conn.query(`DELETE FROM billing_details WHERE order_id = ?`, [orderId]);
+    await conn.query(`DELETE FROM orders WHERE order_id = ?`, [orderId]);
+    if (voucherId) {
+      await conn.query(
+        `UPDATE voucher SET quantity = quantity + 1 WHERE voucher_id = ? AND quantity < 9999`,
+        [voucherId]
+      );
+    }
+
+    await conn.commit();
+    res.json({ message: "Đã xóa đơn hàng thành công!" });
+  } catch (error) {
+    await conn.rollback();
+    console.error("Lỗi xóa đơn hàng:", error);
+    res.status(500).json({ message: "Lỗi server khi xóa đơn hàng" });
+  } finally {
+    conn.release();
+  }
+});
+
 app.post("/api/admin/orders/add", async (req: Request, res: Response) => {
   const {
     adminId,
@@ -2188,7 +2655,7 @@ app.post("/api/admin/orders/add", async (req: Request, res: Response) => {
       } = vnpayConfig;
 
       const txnRef = `ORD${orderId}_${Date.now()}`;
-      const rawReturnUrl = `http://localhost:3000/order?order_id=${orderId}`;
+      const rawReturnUrl = `http://localhost:5173/admin/order?order_id=${orderId}`;
 
       const vnp_Params: Record<string, string> = {
         vnp_Version: "2.1.0",
@@ -2206,7 +2673,6 @@ app.post("/api/admin/orders/add", async (req: Request, res: Response) => {
       };
 
       const sortedParams = sortVnpParams(vnp_Params);
-      sortedParams.vnp_ReturnUrl = encodeURIComponent(sortedParams.vnp_ReturnUrl);
 
       const signData = qs.stringify(sortedParams, { encode: false });
       const hmac = crypto.createHmac("sha512", secretKey);
@@ -2271,6 +2737,45 @@ app.patch("/api/admin/orders/status", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Lỗi cập nhật trạng thái đơn:", error);
     res.status(500).json({ message: "Không thể cập nhật trạng thái đơn" });
+  }
+});
+
+app.delete("/api/admin/orders", async (req: Request, res: Response) => {
+  const { ids } = req.body as { ids?: number[] };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ message: "Danh sách đơn cần xóa rỗng" });
+  }
+
+  const validIds = ids.filter((id) => typeof id === "number" && id > 0);
+  if (validIds.length === 0) {
+    return res.status(400).json({ message: "Không có ID hợp lệ" });
+  }
+
+  const conn = await db.getConnection();
+  await conn.beginTransaction();
+
+  try {
+    const placeholders = validIds.map(() => "?").join(", ");
+    await conn.query(`DELETE FROM order_items WHERE order_id IN (${placeholders})`, validIds);
+    await conn.query(`DELETE FROM billing_details WHERE order_id IN (${placeholders})`, validIds);
+    const [result] = await conn.query<ResultSetHeader>(
+      `DELETE FROM orders WHERE order_id IN (${placeholders})`,
+      validIds
+    );
+
+    await conn.commit();
+
+    res.json({
+      message: `Đã xóa ${result.affectedRows} đơn`,
+      count: result.affectedRows,
+    });
+  } catch (error) {
+    await conn.rollback();
+    console.error("Lỗi xóa đơn:", error);
+    res.status(500).json({ message: "Không thể xóa đơn" });
+  } finally {
+    conn.release();
   }
 });
 
@@ -2506,13 +3011,13 @@ app.get("/api/admin/dashboard-stats", async (req: Request, res: Response) => {
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
     const [orderCountResult] = await db.query<RowDataPacket[]>(
-      "SELECT COUNT(*) as count FROM orders WHERE created_at >= ? AND created_at < ?",
+      "SELECT COUNT(*) as count FROM orders WHERE status = 'completed' AND created_at >= ? AND created_at < ?",
       [startOfDay, endOfDay]
     );
     const orderCount = (orderCountResult[0] as { count: number }).count;
 
     const [revenueResult] = await db.query<RowDataPacket[]>(
-      "SELECT SUM(total) as revenue FROM orders WHERE created_at >= ? AND created_at < ?",
+      "SELECT SUM(total) as revenue FROM orders WHERE status = 'completed' AND created_at >= ? AND created_at < ?",
       [startOfDay, endOfDay]
     );
     const revenue = (revenueResult[0] as { revenue: number | null }).revenue || 0;
@@ -2533,7 +3038,7 @@ app.get("/api/admin/dashboard-stats", async (req: Request, res: Response) => {
         pending: statusMap.pending || 0,
         processing: statusMap.processing || 0,
         completed: statusMap.completed || 0,
-        cancel: statusMap.cancel || 0,
+        cancel: statusMap.canceled || 0,
       },
     });
   } catch (err) {
@@ -2543,10 +3048,9 @@ app.get("/api/admin/dashboard-stats", async (req: Request, res: Response) => {
 });
 
 app.get("/api/admin/statistics", async (req: Request, res: Response) => {
-  const { start_date, end_date, employee_id } = req.query as {
+  const { start_date, end_date } = req.query as {
     start_date?: string;
     end_date?: string;
-    employee_id?: string;
   };
 
   if (!start_date || !end_date) {
@@ -2557,8 +3061,11 @@ app.get("/api/admin/statistics", async (req: Request, res: Response) => {
   let endDate: Date;
 
   try {
-    startDate = startOfDay(new Date(start_date));
-    endDate = endOfDay(new Date(end_date));
+    const inputDate = new Date(start_date);
+    startDate = new Date(inputDate.getFullYear(), inputDate.getMonth(), inputDate.getDate());
+    
+    const inputEndDate = new Date(end_date);
+    endDate = new Date(inputEndDate.getFullYear(), inputEndDate.getMonth(), inputEndDate.getDate() + 1);
   } catch {
     return res.status(400).json({ message: "Định dạng ngày không hợp lệ (YYYY-MM-DD)" });
   }
@@ -2569,39 +3076,34 @@ app.get("/api/admin/statistics", async (req: Request, res: Response) => {
 
   const conn = await db.getConnection();
   try {
-    const whereConditions: string[] = ["o.created_at >= ? AND o.created_at <= ?"];
-    const queryParams: (Date | number)[] = [startDate, endDate];
-
-    if (employee_id && !isNaN(Number(employee_id))) {
-      whereConditions.push("o.id = ?");
-      queryParams.push(Number(employee_id));
-    }
-
-    const whereClause =
-      whereConditions.length > 0 ? "WHERE " + whereConditions.join(" AND ") : "";
-
-    const [orderCountRows] = await conn.query<SummaryStats[]>(
-      `SELECT COUNT(*) as count FROM orders o ${whereClause}`,
-      queryParams
+    const [orderCountRows] = await db.query<SummaryStats[]>(
+      "SELECT COUNT(*) as count FROM orders WHERE status = 'completed' AND created_at >= ? AND created_at < ?",
+      [startDate, endDate]
     );
     const orderCount = orderCountRows[0].count;
 
-    const [revenueRows] = await conn.query<SummaryStats[]>(
-      `SELECT COALESCE(SUM(o.total), 0) as revenue FROM orders o ${whereClause}`,
-      queryParams
+    const [canceledCountRows] = await db.query<SummaryStats[]>(
+      "SELECT COUNT(*) as count FROM orders WHERE status = 'canceled' AND created_at >= ? AND created_at < ?",
+      [startDate, endDate]
+    );
+    const canceledCount = canceledCountRows[0].count;
+
+    const [revenueRows] = await db.query<SummaryStats[]>(
+      "SELECT SUM(total) as revenue FROM orders WHERE status = 'completed' AND created_at >= ? AND created_at < ?",
+      [startDate, endDate]
     );
     const revenue = Number(revenueRows[0].revenue ?? 0);
 
-    const [productCountRows] = await conn.query<SummaryStats[]>(
+    const [productCountRows] = await db.query<SummaryStats[]>(
       `SELECT COALESCE(SUM(oi.quantity), 0) as count 
        FROM order_items oi 
        JOIN orders o ON oi.order_id = o.order_id 
-       ${whereClause}`,
-      queryParams
+       WHERE o.status = 'completed' AND o.created_at >= ? AND o.created_at < ?`,
+      [startDate, endDate]
     );
     const productCount = Number(productCountRows[0].count ?? 0);
 
-    const [categoryStats] = await conn.query<CategoryStat[]>(
+    const [categoryStats] = await db.query<CategoryStat[]>(
       `SELECT 
          COALESCE(c.category_name, 'Khác') AS label,
          COALESCE(SUM(oi.quantity), 0) AS order_count
@@ -2609,13 +3111,13 @@ app.get("/api/admin/statistics", async (req: Request, res: Response) => {
        JOIN menu m ON oi.menu_id = m.menu_id
        JOIN menu_category c ON m.category_id = c.category_id
        JOIN orders o ON oi.order_id = o.order_id
-       ${whereClause}
+       WHERE o.status = 'completed' AND o.created_at >= ? AND o.created_at < ?
        GROUP BY c.category_id, c.category_name
        ORDER BY order_count DESC`,
-      queryParams
+      [startDate, endDate]
     );
 
-    const [topUsers] = await conn.query<TopUserStat[]>(
+    const [topUsers] = await db.query<TopUserStat[]>(
       `SELECT 
          COALESCE(u.username, 'Khách lẻ') AS username,
          u.email,
@@ -2623,14 +3125,14 @@ app.get("/api/admin/statistics", async (req: Request, res: Response) => {
          COALESCE(SUM(o.total), 0) AS total_spent
        FROM orders o
        LEFT JOIN users u ON o.id = u.id
-       ${whereClause}
+       WHERE o.status = 'completed' AND o.created_at >= ? AND o.created_at < ?
        GROUP BY o.id, u.username, u.email
        ORDER BY order_count DESC
        LIMIT 5`,
-      queryParams
+      [startDate, endDate]
     );
 
-    const [topProducts] = await conn.query<TopProductStat[]>(
+    const [topProducts] = await db.query<TopProductStat[]>(
       `SELECT 
          m.name,
          m.image_url,
@@ -2639,16 +3141,17 @@ app.get("/api/admin/statistics", async (req: Request, res: Response) => {
        FROM order_items oi
        JOIN menu m ON oi.menu_id = m.menu_id
        JOIN orders o ON oi.order_id = o.order_id
-       ${whereClause}
+       WHERE o.status = 'completed' AND o.created_at >= ? AND o.created_at < ?
        GROUP BY m.menu_id, m.name, m.image_url
        ORDER BY sold_count DESC
        LIMIT 5`,
-      queryParams
+      [startDate, endDate]
     );
 
     res.json({
       summary: {
         orderCount,
+        canceledCount,
         productCount,
         revenue,
       },
@@ -2674,6 +3177,18 @@ app.get("/api/admin/statistics", async (req: Request, res: Response) => {
     res.status(500).json({ message: "Lỗi server khi lấy thống kê" });
   } finally {
     conn.release();
+  }
+});
+
+app.get("/api/admin/employees", async (req: Request, res: Response) => {
+  try {
+    const [rows] = await db.query<RowDataPacket[]>(
+      "SELECT id, username, email FROM users WHERE role = 'employee' ORDER BY username"
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("Lỗi lấy danh sách nhân viên:", error);
+    res.status(500).json({ error: "Lỗi truy vấn cơ sở dữ liệu" });
   }
 });
 

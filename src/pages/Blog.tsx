@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { apiRequest, API_ENDPOINTS } from "../config/api";
+
 interface BlogPost {
   blog_id: number;
   title: string;
@@ -9,7 +9,7 @@ interface BlogPost {
   post_date: string;
   comments_count?: number;
   created_at: string;
-  update_at: string;
+  updated_at: string;
 }
 
 const Blog = () => {
@@ -18,7 +18,7 @@ const Blog = () => {
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const response = await apiRequest(API_ENDPOINTS.BLOG_LIST);
+        const response = await fetch("http://localhost:5000/api/blog");
         if (!response.ok) {
           throw new Error("Lỗi khi tải dữ liệu blog");
         }

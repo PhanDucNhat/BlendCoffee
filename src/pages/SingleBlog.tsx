@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { apiRequest, API_ENDPOINTS } from "../config/api";
 
 interface BlogPost {
   blog_id: number;
@@ -43,7 +42,7 @@ const SingleBlog: React.FC = () => {
     const fetchBlogData = async () => {
       try {
         setLoading(true);
-        const blogResponse = await apiRequest(API_ENDPOINTS.BLOG_DETAIL(id!));
+        const blogResponse = await fetch(`http://localhost:5000/api/blog/${id}`);
 
         if (!blogResponse.ok) {
           if (blogResponse.status === 404) {
@@ -56,28 +55,18 @@ const SingleBlog: React.FC = () => {
         setBlog(blogData);
 
         try {
-          const relatedResponse = await apiRequest(
-            API_ENDPOINTS.BLOG_RELATED(id!)
-          );
+          const relatedResponse = await fetch(`http://localhost:5000/api/blog`);
           if (relatedResponse.ok) {
-            const relatedData = await relatedResponse.json();
-            setRelatedBlogs(relatedData.slice(0, 3));
+            const allBlogs = await relatedResponse.json();
+            const related = allBlogs
+              .filter((b: BlogPost) => b.blog_id !== parseInt(id!))
+              .slice(0, 3);
+            setRelatedBlogs(related);
           }
         } catch (err) {
           console.log("Could not fetch related blogs:", err);
         }
-
-        try {
-          const commentsResponse = await apiRequest(
-            API_ENDPOINTS.BLOG_COMMENTS(id!)
-          );
-          if (commentsResponse.ok) {
-            const commentsData = await commentsResponse.json();
-            setComments(commentsData);
-          }
-        } catch (err) {
-          console.log("Could not fetch comments:", err);
-        }
+        setComments([]);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Có lỗi xảy ra");
       } finally {
@@ -110,8 +99,11 @@ const SingleBlog: React.FC = () => {
 
     setSubmittingComment(true);
     try {
-      const response = await apiRequest(API_ENDPOINTS.BLOG_COMMENTS(id!), {
+      const response = await fetch(`http://localhost:5000/api/blog/${id}/comments`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           user_name: userName.trim(),
           content: newComment.trim(),

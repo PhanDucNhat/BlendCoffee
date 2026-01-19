@@ -16,6 +16,7 @@ import Blog from "./components/Blog/Blog";
 import Footer from "./components/Footer/Footer";
 import Menu from "./pages/Menu";
 import BlogPage from "./pages/Blog";
+import SingleBlog from "./pages/SingleBlog";
 import AboutPage from "./pages/About";
 import ContactPage from "./pages/Contact";
 import CartPage from "./pages/Cart";
@@ -60,7 +61,7 @@ const AdminRoute: React.FC<{ children: React.ReactElement }> = ({
 
   try {
     const user: LoggedInUser = JSON.parse(storedUser);
-    if (user.role !== "admin") {
+    if (!["admin", "employee"].includes(user.role)) {
       return <Navigate to="/" replace />;
     }
   } catch {
@@ -99,6 +100,7 @@ const AppContent: React.FC = () => {
         <Route path="/menu" element={<Menu />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog/:id" element={<SingleBlog />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout" element={<Checkout />} />
