@@ -32,7 +32,7 @@ const Seller: React.FC = () => {
 
         const filtered = data
           .filter((item) => item.category_name === "Cà phê")
-          .sort((a, b) => b.menu_id - a.menu_id)
+          .filter((item) => item.price && item.price > 0)
           .slice(0, 4);
 
         setCoffeeItems(filtered);
@@ -79,7 +79,7 @@ const Seller: React.FC = () => {
                 </h3>
                 <p className="text-gray-400 text-sm mb-3">{item.description}</p>
                 <p className="text-white font-semibold mb-3">
-                  {item.price ? `${item.price}đ` : "Updating..."}
+                  {item.price}đ
                 </p>
                 <button
                   onClick={() => handleSingleProduct(item.menu_id)}
